@@ -1,0 +1,15 @@
+/* Shared focus treatment for interactive components. */
+@utility focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+
+  &:focus-visible {
+    outline-color: var(--color-ring);
+  }
+}
+
+@utility transition-standard {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--oct-duration-normal);
+  transition-timing-function: var(--oct-ease-standard);
+}

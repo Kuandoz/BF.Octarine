@@ -1,0 +1,34 @@
+{
+  "name": "@octarine/tailwind",
+  "version": "0.1.0",
+  "description": "Octarine Tailwind CSS v4 theme: maps @octarine/tokens onto Tailwind's theme variables.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "style": "./dist/index.css",
+      "default": "./dist/index.css"
+    },
+    "./theme.css": "./dist/theme.css",
+    "./base.css": "./dist/base.css",
+    "./utilities.css": "./dist/utilities.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsx scripts/build-theme.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@octarine/tokens": "workspace:*"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

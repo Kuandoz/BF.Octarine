@@ -1,0 +1,14 @@
+/*
+ * Octarine Tailwind entry point.
+ *
+ * Consumers import this instead of `tailwindcss`, then point Tailwind at their
+ * own sources (and at @octarine/vue) with `@source`:
+ *
+ *   @import '@octarine/tailwind';
+ *   @source '../node_modules/@octarine/vue/dist';
+ */
+@import 'tailwindcss';
+@import '@octarine/tokens/tokens.css';
+@import './theme.css';
+@import './base.css';
+@import './utilities.css';
