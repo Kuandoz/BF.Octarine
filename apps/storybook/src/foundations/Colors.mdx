@@ -1,0 +1,65 @@
+import { ColorItem, ColorPalette, Meta } from '@storybook/addon-docs/blocks'
+import { colors, cssVar, flattenSemantic, intents, semanticColors } from '@octarine/tokens'
+
+<Meta title="Foundations/Colors" />
+
+export const palettes = Object.entries(colors).filter(([, value]) => typeof value === 'object')
+
+export const semantic = flattenSemantic(semanticColors.light).map(([name]) => name)
+
+export const swatches = (names) =>
+  Object.fromEntries(names.map((name) => [name, `var(${cssVar(`color-${name}`)})`]))
+
+# Colors
+
+Octarine colors come in two layers, both defined in `@octarine/tokens`:
+
+- **Primitives** — raw OKLCH scales (`brand-500`, `neutral-200`, …). They carry no meaning.
+- **Semantic** — named by purpose (`surface`, `fg-muted`, `danger`, …) and pointing at a primitive.
+  They swap between light and dark: use the **Theme** toolbar button to compare.
+
+Components only use semantic colors, so `bg-primary` or `text-fg-muted` adapt to the theme
+automatically. Reach for a primitive (`bg-brand-100`) only for one-off illustrations.
+
+## Semantic
+
+<ColorPalette>
+  <ColorItem
+    title="Surfaces"
+    subtitle="bg-canvas, bg-surface, …"
+    colors={swatches(['canvas', 'surface', 'surface-raised', 'surface-sunken'])}
+  />
+  <ColorItem
+    title="Foreground"
+    subtitle="text-fg, text-fg-muted, …"
+    colors={swatches(['fg', 'fg-muted', 'fg-subtle', 'fg-inverse'])}
+  />
+  <ColorItem
+    title="Lines"
+    subtitle="border-border, ring"
+    colors={swatches(['border', 'border-strong', 'ring'])}
+  />
+  {intents.map((intent) => (
+    <ColorItem
+      key={intent}
+      title={intent}
+      subtitle={`bg-${intent}, bg-${intent}-subtle, …`}
+      colors={swatches(semantic.filter((name) => name === intent || name.startsWith(`${intent}-`)))}
+    />
+  ))}
+</ColorPalette>
+
+## Primitives
+
+<ColorPalette>
+  {palettes.map(([name, scale]) => (
+    <ColorItem
+      key={name}
+      title={name}
+      subtitle={`bg-${name}-500`}
+      colors={Object.fromEntries(
+        Object.keys(scale).map((step) => [step, `var(${cssVar(`color-${name}-${step}`)})`]),
+      )}
+    />
+  ))}
+</ColorPalette>

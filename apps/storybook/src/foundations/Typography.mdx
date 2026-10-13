@@ -1,0 +1,81 @@
+import { Meta, Typeset } from '@storybook/addon-docs/blocks'
+import { fontFamily, fontSize, textStyles } from '@octarine/tokens'
+
+<Meta title="Foundations/Typography" />
+
+# Typography
+
+## Text styles
+
+Text styles bundle size, line height, weight and letter spacing into one utility —
+`text-heading-1`, `text-body`, `text-caption`, … — and are what `OHeading` and `OText` use.
+Prefer them over combining `text-*`, `leading-*` and `font-*` by hand.
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'max-content 1fr',
+    gap: '1.25rem 2rem',
+    alignItems: 'baseline',
+    padding: '1.5rem',
+    borderRadius: '0.75rem',
+    background: 'var(--oct-color-surface)',
+    color: 'var(--oct-color-fg)',
+    border: '1px solid var(--oct-color-border)',
+  }}
+>
+  {Object.entries(textStyles).map(([name, s]) => [
+    <code key={`${name}-name`} style={{ fontSize: '0.75rem', color: 'var(--oct-color-fg-muted)' }}>
+      text-{name}
+    </code>,
+    <span
+      key={`${name}-sample`}
+      style={{
+        fontFamily: `var(--oct-text-${name}-family)`,
+        fontSize: `var(--oct-text-${name}-size)`,
+        fontWeight: `var(--oct-text-${name}-weight)`,
+        lineHeight: `var(--oct-text-${name}-leading)`,
+        letterSpacing: `var(--oct-text-${name}-tracking)`,
+        textTransform: name === 'overline' ? 'uppercase' : undefined,
+      }}
+    >
+      The quick brown fox jumps over the lazy dog
+      <span
+        style={{
+          marginLeft: '0.75rem',
+          fontSize: '0.75rem',
+          fontFamily: 'var(--oct-font-mono)',
+          fontWeight: 400,
+          letterSpacing: 0,
+          textTransform: 'none',
+          color: 'var(--oct-color-fg-subtle)',
+        }}
+      >
+        {s.size} / {s.weight} / {s.lineHeight}
+      </span>
+    </span>,
+  ])}
+</div>
+
+## Font families
+
+<div>
+  {Object.entries(fontFamily).map(([name, family]) => (
+    <Typeset
+      key={name}
+      fontFamily={family}
+      fontSizes={[fontSize['2xl']]}
+      sampleText={`font-${name} — Octarine 0123456789`}
+    />
+  ))}
+</div>
+
+## Size scale
+
+The raw scale behind the text styles (`text-xs` … `text-6xl`).
+
+<Typeset
+  fontSizes={Object.values(fontSize)}
+  fontFamily={fontFamily.sans}
+  sampleText="The quick brown fox"
+/>

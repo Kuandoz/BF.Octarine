@@ -1,0 +1,5 @@
+@import '@octarine/tailwind';
+
+/* Scan component sources directly so edits show up without rebuilding @octarine/vue. */
+@source '../../../packages/vue/src';
+@source '../src';

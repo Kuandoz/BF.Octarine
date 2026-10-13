@@ -1,0 +1,82 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+import { radius, shadow, spacing } from '@octarine/tokens'
+
+<Meta title="Foundations/Spacing & Shape" />
+
+export const steps = [1, 2, 3, 4, 6, 8, 12, 16, 24]
+
+export const label = {
+  fontFamily: 'var(--oct-font-mono)',
+  fontSize: '0.75rem',
+  color: 'var(--oct-color-fg-muted)',
+}
+
+# Spacing & shape
+
+## Spacing
+
+Every spacing utility is a multiple of one base unit (`--spacing: {spacing}`), so `p-4` is
+4 × {spacing}. Stick to the steps below to keep a consistent rhythm.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+  {steps.map((n) => (
+    <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <code style={{ ...label, width: '4rem' }}>{n}</code>
+      <div
+        style={{
+          height: '1rem',
+          width: `calc(var(--oct-spacing) * ${n})`,
+          background: 'var(--oct-color-primary)',
+          borderRadius: '2px',
+        }}
+      />
+    </div>
+  ))}
+</div>
+
+## Radius
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
+  {Object.keys(radius).map((name) => (
+    <div key={name} style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          width: '5rem',
+          height: '5rem',
+          background: 'var(--oct-color-primary-subtle)',
+          border: '1px solid var(--oct-color-primary)',
+          borderRadius: `var(--oct-radius-${name})`,
+        }}
+      />
+      <code style={label}>rounded-{name}</code>
+    </div>
+  ))}
+</div>
+
+## Shadow
+
+<div
+  style={{
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '2rem',
+    padding: '1.5rem',
+    background: 'var(--oct-color-canvas)',
+    borderRadius: '0.75rem',
+  }}
+>
+  {Object.keys(shadow).map((name) => (
+    <div key={name} style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          width: '6rem',
+          height: '6rem',
+          background: 'var(--oct-color-surface-raised)',
+          borderRadius: 'var(--oct-radius-lg)',
+          boxShadow: `var(--oct-shadow-${name})`,
+        }}
+      />
+      <code style={label}>shadow-{name}</code>
+    </div>
+  ))}
+</div>
