@@ -1,0 +1,4 @@
+@import '@octarine/tailwind';
+
+/* A real consumer scans the published component build, plus its own sources. */
+@source '../node_modules/@octarine/vue/dist';
