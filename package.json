@@ -1,0 +1,20 @@
+{
+  "name": "octarine",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "build": "pnpm -r --filter ./packages/** build",
+    "storybook": "pnpm build:foundation && pnpm --filter @octarine/storybook dev",
+    "build-storybook": "pnpm build:foundation && pnpm --filter @octarine/storybook build",
+    "playground": "pnpm build && pnpm --filter @octarine/playground dev",
+    "build:foundation": "pnpm --filter @octarine/tokens --filter @octarine/tailwind build",
+    "test": "pnpm --filter @octarine/vue test",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3"
+  }
+}
