@@ -9,7 +9,7 @@
     "build-storybook": "pnpm build:foundation && pnpm --filter @octarine/storybook build",
     "playground": "pnpm build && pnpm --filter @octarine/playground dev",
     "build:foundation": "pnpm --filter @octarine/tokens --filter @octarine/tailwind build",
-    "test": "pnpm --filter @octarine/vue test",
+    "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write ."
   },
