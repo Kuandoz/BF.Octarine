@@ -1,0 +1,109 @@
+# CLAUDE.md
+
+Octarine is a Vue 3 + Tailwind CSS v4 design system in a pnpm monorepo. See `README.md` for the
+full overview.
+
+## Layout
+
+```
+packages/tokens    → design tokens (TS source of truth → tokens.css / tokens.json)
+packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
+packages/vue       → Vue components (one folder per component: .vue, .stories.ts, .spec.ts, index.ts)
+apps/storybook     → Storybook 10 (component stories + Foundations MDX pages)
+apps/playground    → demo app consuming the *built* packages
+```
+
+Each layer may only depend on the layers above it in this list. `tokens` contains no Tailwind or
+Vue code. Components use no raw color values.
+
+## Commands
+
+pnpm may not be on PATH; prefix with `npx pnpm` if `pnpm` is not found.
+
+```sh
+pnpm install
+pnpm build            # all packages (tokens → tailwind → vue)
+pnpm build:foundation # tokens + tailwind only (needed after token changes)
+pnpm test             # Vitest component specs
+pnpm typecheck
+pnpm storybook        # dev server on :6006
+pnpm format           # Prettier
+```
+
+Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` must pass.
+
+## Conventions
+
+- **Colors:** components use semantic colors (`bg-surface`, `text-fg-muted`, `bg-danger-subtle`), never
+  primitives (`bg-red-600`). Dark mode is token-driven, so don't use `dark:` classes in components.
+- **Typography:** use text-style utilities (`text-heading-2`, `text-body`, `text-caption`) instead of
+  combining size, leading and weight by hand.
+- **Variants:** define them with `cva` and write every class name out in full, because Tailwind
+  scans the source. Never build class names with string interpolation.
+- **Class merging:** root elements use `useClasses()` with `defineOptions({ inheritAttrs: false })`
+  so consumer classes override defaults.
+- **New components:** prefix with `O`, place under the correct category
+  (`foundations`, `actions`, `forms`, `feedback`, `layout`), and export from
+  `packages/vue/src/components/index.ts`. Every component needs a story and a spec.
+- **Token changes:** edit `packages/tokens/src`, and map any new Tailwind namespace in
+  `packages/tailwind/scripts/build-theme.ts`.
+- **Commits:** use Conventional Commits (`feat(vue): …`, `fix(tokens): …`, `docs: …`), scoped to
+  the package.
+
+## Accessibility: WCAG 2.2 AA is mandatory
+
+Everything in this repo (tokens, components, Storybook docs, playground) must conform to
+**WCAG 2.2 Level AA**. A change that introduces a violation is not done, even if it builds and tests
+pass. If a request would conflict with this rule, say so rather than silently complying.
+
+### Color & contrast (tokens)
+
+- Text needs at least **4.5:1** contrast against its background. Large text (≥ 24px, or ≥ 18.66px bold)
+  needs at least **3:1** (1.4.3).
+- UI component boundaries, focus indicators, icons and meaningful graphics need at least **3:1**
+  against adjacent colors (1.4.11). This includes input borders and outline-button/badge borders.
+- Every semantic pairing is checked in **both light and dark** themes by
+  `packages/tokens/src/contrast.spec.ts`. When a component starts using a new color combination, add
+  that pair to the spec.
+- `border` is for decorative dividers only. Anything that identifies a control (input, outline
+  button) uses `border-strong`.
+- `warning` is not a text color (it can't reach 4.5:1 on light surfaces); use `text-warning-subtle-fg`.
+- Disabled controls are exempt from contrast, but must still be identifiable as disabled.
+- Never convey meaning by color alone (1.4.1). Errors need text, and states need an icon,
+  text or shape as well.
+
+### Components
+
+- **Semantic HTML first:** use `<button>` for actions, `<a href>` for navigation, and native form
+  controls. Only use ARIA when no native element fits, and then follow the WAI-ARIA Authoring
+  Practices pattern for that widget.
+- **Keyboard:** everything interactive is reachable and operable by keyboard, in a logical order.
+  Don't use a positive `tabindex`, and don't create keyboard traps (2.1.1, 2.1.2, 2.4.3).
+- **Focus:** a visible focus indicator is required (use `focus-ring` or an equivalent with ≥ 3:1
+  contrast), and it must not be hidden by other content (2.4.7, 2.4.11).
+- **Names:** every control has an accessible name. Icon-only buttons need `aria-label` (4.1.2, 2.5.3).
+- **Forms:**
+  - Every input has a programmatic label; use `OField`.
+  - Hints and errors are linked with `aria-describedby`, and invalid fields get `aria-invalid`.
+  - Required fields are marked both visually and programmatically (1.3.1, 3.3.1, 3.3.2).
+- **Target size:** pointer targets are at least **24×24 CSS px**, or have enough spacing (2.5.8).
+- **Status messages:** loading, success and error announcements use `role="status"` or
+  `role="alert"` / live regions (4.1.3).
+- **Motion:** respect `prefers-reduced-motion` (use `motion-safe:` / `motion-reduce:`). Nothing
+  flashes more than 3 times per second (2.3.1).
+- **Resize & reflow:**
+  - Use `rem`-based sizes, and don't use fixed heights that clip text.
+  - Content works at 200% zoom and at 320px width without horizontal scrolling (1.4.4, 1.4.10).
+  - Text-spacing overrides must not break layouts (1.4.12).
+- **Hover/focus content** (tooltips, popovers) can be dismissed, can be hovered, and stays visible
+  until dismissed (1.4.13).
+- **Language:** apps set `<html lang>` (3.1.1).
+
+### Verification
+
+- The Storybook a11y addon (axe) must report **no violations** for any story, in light and dark
+  themes.
+- Specs assert the accessibility contract: roles, accessible names, `aria-*` wiring and keyboard
+  behavior, not just classes.
+- Automated checks catch only part of WCAG. For new interactive components, also check
+  keyboard-only use and screen-reader announcements manually, and mention what was checked.
