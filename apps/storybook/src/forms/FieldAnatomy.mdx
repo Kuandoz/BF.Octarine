@@ -1,0 +1,234 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+import { createElement } from 'react'
+import {
+  arrowPath,
+  checkCircle,
+  exclamationCircle,
+  globeAlt,
+  lockClosed,
+  xMark,
+} from '@octarine/icons/heroicons/mini'
+
+<Meta title="Forms/Anatomy" />
+
+export const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+
+export const props = (attrs = {}) =>
+  Object.fromEntries(Object.entries(attrs).map(([k, v]) => [camel(k), v]))
+
+export const node = ([tag, attrs, children = []], key) =>
+  createElement(tag, { key, ...props(attrs) }, children.map(node))
+
+export const Icon = ({ icon, className = '' }) => (
+  <svg
+    viewBox={icon.viewBox}
+    {...props(icon.attrs)}
+    aria-hidden="true"
+    focusable="false"
+    className={`icon icon-sm ${className}`}
+  >
+    {icon.nodes.map(node)}
+  </svg>
+)
+
+export const pins = {
+  'top-left': '-top-3 -left-3',
+  left: 'top-1/2 -left-9 -translate-y-1/2',
+}
+
+export const Part = ({ n, pin = 'top-left', className = '', children }) => (
+  <span
+    className={`relative rounded-[2px] outline-1 outline-offset-2 outline-primary outline-dashed ${className}`}
+  >
+    <span
+      className={`absolute z-10 flex size-5 items-center justify-center rounded-full bg-primary text-[0.6875rem] leading-none font-semibold text-primary-fg ${pins[pin]}`}
+    >
+      {n}
+    </span>
+    {children}
+  </span>
+)
+
+export const Frame = ({ className = '', children }) => (
+  <span
+    className={`theme-border flex min-h-(--oct-control-height-md) w-full items-center gap-2 rounded-input bg-surface px-(--oct-input-px) text-body text-fg ${className}`}
+  >
+    {children}
+  </span>
+)
+
+export const State = ({ name, note, children }) => (
+  <li className="flex min-w-0 flex-col gap-2">
+    <span className="text-label text-fg">{name}</span>
+    <span aria-hidden="true" className="flex">
+      {children}
+    </span>
+    <span className="text-caption text-fg-muted">{note}</span>
+  </li>
+)
+
+# Field anatomy
+
+The parts a form field is built from, and what each one must do. **This is the target design:**
+parts marked _planned_ below don't exist in `OField` / `OInput` yet. Switch **Theme** and **Mode**
+in the toolbar: the diagram uses the same tokens as the components.
+
+<div className="sb-unstyled my-8">
+  <div
+    role="img"
+    aria-label="Anatomy of a form field with ten numbered parts: label, required or optional marker, label action, hint, control frame, leading adornment, native control, trailing adornment, error message and counter. Each part is described in the table below."
+    className="rounded-card bg-canvas px-6 py-10 sm:px-14"
+  >
+    <div className="mx-auto flex max-w-md flex-col gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-4">
+        <span className="flex items-baseline gap-5">
+          <Part n="1">
+            <span className="text-label text-fg">Website</span>
+          </Part>
+          <Part n="2">
+            <span className="text-label text-fg-muted">(optional)</span>
+          </Part>
+        </span>
+        <Part n="3">
+          <span className="text-body-sm text-primary underline">Why we ask</span>
+        </Part>
+      </div>
+      <Part n="4" className="self-start">
+        <span className="text-body-sm text-fg-muted">Shown on your public profile.</span>
+      </Part>
+      <Part n="5" pin="left" className="mt-2 flex">
+        <Frame className="gap-5 border-danger py-4">
+          <Part n="6" className="flex shrink-0 items-center gap-1.5">
+            <Icon icon={globeAlt} className="text-fg-muted" />
+            <span className="text-fg-muted">https://</span>
+          </Part>
+          <Part n="7" className="flex min-w-0 flex-1">
+            <span className="truncate">octarine design</span>
+          </Part>
+          <Part n="8" className="flex shrink-0 items-center gap-2">
+            <Icon icon={exclamationCircle} className="text-danger" />
+            <span className="flex size-6 items-center justify-center rounded-control text-fg-muted">
+              <Icon icon={xMark} />
+            </span>
+          </Part>
+        </Frame>
+      </Part>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <Part n="9">
+          <span className="flex items-center gap-1.5 text-body-sm text-danger">
+            <Icon icon={exclamationCircle} />
+            Enter a web address without spaces.
+          </span>
+        </Part>
+        <Part n="10">
+          <span className="text-body-sm text-fg-muted">15 / 60</span>
+        </Part>
+      </div>
+    </div>
+  </div>
+</div>
+
+| #   | Part                             | Element                                       | Rules                                                                                                                                                                                              |
+| --- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Label**                        | `<label for>`                                 | Always visible. A placeholder never replaces it.                                                                                                                                                   |
+| 2   | **Required/optional marker**     | text inside the label                         | `*` for required, `(optional)` for optional, or both (see below). The text follows the form's language. The control still gets `required`, so screen readers announce it.                          |
+| 3   | **Label action** _planned_       | slot                                          | An optional link or toggletip ("Forgot password?"). It is its own focusable element, before the control in tab order.                                                                              |
+| 4   | **Hint**                         | `<p id>`                                      | **Above** the control, so it's read before typing and the on-screen keyboard or autofill can't cover it. Linked with `aria-describedby`.                                                           |
+| 5   | **Control frame** _planned_      | `OControlFrame`                               | Draws the border, background, radius and focus ring (`focus-within`), so adornments sit inside the box. Shared by `OInput`, `OTextarea` and `OSelect`.                                             |
+| 6   | **Leading adornment** _planned_  | `icon` / `prefix` props, `#leading` slot      | A decorative icon (`aria-hidden`), or prefix text such as `€` or `https://`. Prefix text carries meaning, so it is linked to the control with `aria-describedby`.                                  |
+| 7   | **Native control**               | `<input>`, `<textarea>`, `<select>`           | Gets `id`, `required`, `disabled` / `readonly`, `aria-invalid` and `aria-describedby`.                                                                                                             |
+| 8   | **Trailing adornment** _planned_ | `suffix`, `clearable` props, `#trailing` slot | Suffix text, a status icon (error, or `OSpinner` while loading), and actions (clear, show password). Actions are real `<button>`s with a translated `aria-label` and a target of at least 24×24px. |
+| 9   | **Error message**                | `<p id>`                                      | Shown **as well as** the hint, below the control. An icon labelled "Error:" plus text, so color is not the only signal. Linked with `aria-describedby` after the hint.                             |
+| 10  | **Counter** _planned_            | `<p id>`                                      | Optional. A polite live region that only speaks near the limit ("5 characters left"), not on every keystroke.                                                                                      |
+
+The control's `aria-describedby` lists, in order: the prefix/suffix text, the hint, the error and
+the counter. The field decides _what_ the error says; _when_ it appears is up to the form (on
+blur, on submit, …).
+
+## Layout
+
+Fields are **stacked**: label, hint, control and message, top to bottom. There is no
+label-beside-control variant. The gaps come from theme tokens (`--oct-field-gap`, _planned_), so a
+dense theme (Circuit) and a roomy one (Vellum) space fields differently.
+
+## States
+
+<div className="sb-unstyled my-8">
+  <ul className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-6 rounded-card bg-canvas p-6">
+    <State name="Default" note="border-strong frame">
+      <Frame className="border-border-strong text-fg-muted">Placeholder</Frame>
+    </State>
+    <State name="Focus" note="focus ring on the frame">
+      <Frame className="border-border-strong outline-2 outline-ring">Typing</Frame>
+    </State>
+    <State name="Read-only" note="sunken, but not dimmed, with a lock icon; still focusable">
+      <Frame className="border-border-strong bg-surface-sunken">
+        <span className="flex-1">Fixed value</span>
+        <Icon icon={lockClosed} className="text-fg-muted" />
+      </Frame>
+    </State>
+    <State name="Disabled" note="grayed out: sunken and dimmed, label too">
+      <Frame className="border-border-strong bg-surface-sunken opacity-50">Unavailable</Frame>
+    </State>
+    <State name="Invalid" note="danger border and icon, plus the error message">
+      <Frame className="border-danger">
+        <span className="flex-1">Wrong value</span>
+        <Icon icon={exclamationCircle} className="text-danger" />
+      </Frame>
+    </State>
+    <State name="Loading" note="spinner, announced through role=status">
+      <Frame className="border-border-strong">
+        <span className="flex-1">Checking…</span>
+        <Icon icon={arrowPath} className="text-fg-muted" />
+      </Frame>
+    </State>
+    <State name="Valid (optional)" note="only when a check ran, e.g. a free username">
+      <Frame className="border-border-strong">
+        <span className="flex-1">octarine</span>
+        <Icon icon={checkCircle} className="text-success" />
+      </Frame>
+    </State>
+  </ul>
+</div>
+
+## Groups: `OFieldset` _planned_
+
+Radio buttons, checkboxes and inputs split into parts (day / month / year) share one label. They
+use a `<fieldset>` with a `<legend>` instead of a `<label>`, and have the same marker, hint, error
+and layout as a field. Controls inside pick up `invalid` and `disabled` from the group.
+
+```
+┌ fieldset ───────────────────────────┐
+│ legend   Delivery  (optional)       │
+│ hint     Pick one.                  │
+│ controls ○ Standard  ○ Express      │
+│ error    ⚠ Choose a delivery option.│
+└─────────────────────────────────────┘
+```
+
+## Required and optional markers
+
+Forms choose how fields are marked, and a field can override it:
+
+| Mode       | Required field | Optional field       | Note at the top of the form      |
+| ---------- | -------------- | -------------------- | -------------------------------- |
+| `required` | `Name *`       | `Website`            | "Fields marked \* are required." |
+| `optional` | `Name`         | `Website (optional)` | none                             |
+| `both`     | `Name *`       | `Website (optional)` | "Fields marked \* are required." |
+
+- The `*` is hidden from screen readers (`aria-hidden`); `required` on the control announces it.
+- `(optional)` is visible text inside the `<label>`, so it is part of the accessible name, and
+  speech-input users can say it (WCAG 2.5.3).
+
+## Language
+
+Text that Octarine writes itself must follow the language of the form, not just of the app:
+`(optional)`, the required note, the counter, the "Error:" label and the names of actions like
+_Clear_ or _Show password_.
+
+- **Which language:** the nearest `lang` attribute, so `<form lang="fr">` inside an English page
+  gets French. Without one, `<html lang>`, which every app must set anyway (WCAG 3.1.1).
+- **Where the text comes from:** Octarine ships English and lets the app add or override languages
+  (planned: `app.use(createMessages({ nl: { optional: 'optioneel', … } }))`). A missing language
+  falls back to English and warns once in development.
+- Text the app passes in (label, hint, error) is the app's job to translate.
