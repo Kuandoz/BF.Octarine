@@ -8,8 +8,8 @@ const input = cva(
     'transition-standard theme-border w-full rounded-input bg-surface px-(--oct-input-px) text-fg',
     'placeholder:text-fg-subtle',
     'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
-    // Dashed as well as dimmed, so "disabled" doesn't rely on color alone.
-    'disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-fg-muted',
+    // Grayed out like a disabled OButton; the field's label dims with it.
+    'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-50',
   ],
   {
     variants: {
