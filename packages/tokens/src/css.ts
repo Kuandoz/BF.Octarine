@@ -59,6 +59,9 @@ function themeDecls(theme: Theme): string[] {
     decl('button-transform', c.buttonTransform),
     decl('badge-transform', c.badgeTransform),
     decl('badge-tracking', c.badgeTracking),
+    ...Object.entries(c.iconSize).map(([k, v]) => decl(`icon-size-${k}`, v)),
+    decl('icon-stroke-width', c.iconStrokeWidth),
+    decl('icon-disabled-opacity', c.iconDisabledOpacity),
   ]
 }
 

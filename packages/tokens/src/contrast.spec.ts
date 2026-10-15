@@ -33,6 +33,15 @@ const pairs: [fg: string, bg: string, min: number][] = [
       [intent, 'surface', TEXT],
       [intent, 'surface-raised', TEXT],
     ]),
+  // OIcon intents are meaningful graphics on any background (1.4.11). Like text,
+  // warning icons use `warning-subtle-fg`.
+  ...intents.flatMap((intent) =>
+    backgrounds.map((bg): [string, string, number] => [
+      intent === 'warning' ? 'warning-subtle-fg' : intent,
+      bg,
+      NON_TEXT,
+    ]),
+  ),
 ]
 
 const cases = Object.values(themes).flatMap((theme) =>

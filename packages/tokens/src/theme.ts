@@ -36,6 +36,12 @@ export type ComponentTokens = {
   cardBorder: SemanticColorName
   cardElevatedBorder: SemanticColorName | 'transparent'
   cardElevatedShadow: ShadowName
+  /** Icon sizes for `size="sm|md|lg"`; an icon without a size follows the font size (1em). */
+  iconSize: Record<ControlSize, string>
+  /** Stroke width of outline icons, in 24-unit icon space (Heroicons draws at 1.5). */
+  iconStrokeWidth: string
+  /** Opacity of a disabled-looking icon (on top of a grayscale filter). */
+  iconDisabledOpacity: string
 }
 
 /**

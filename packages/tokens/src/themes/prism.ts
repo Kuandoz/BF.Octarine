@@ -333,6 +333,9 @@ export const prism: Theme = {
     cardBorder: 'border-strong',
     cardElevatedBorder: 'fg',
     cardElevatedShadow: 'md',
+    iconSize: { sm: '1rem', md: '1.25rem', lg: '1.5rem' },
+    iconStrokeWidth: '2',
+    iconDisabledOpacity: '0.5',
     radius: { control: 'md', input: 'md', card: 'lg', badge: 'sm' },
   },
 }
