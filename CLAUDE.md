@@ -62,6 +62,13 @@ Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` mus
     Size and stroke width come from theme tokens.
   - Icons are decorative (`aria-hidden`) unless they get a `label`. Icon-only buttons need an
     `aria-label`.
+- **Forms:** wrap fields in `OForm` (markers, language), each control in `OField` (label, hint,
+  error, counter), and groups of controls in `OFieldset` (legend). New controls draw their box with
+  `OControlFrame` and mark the native element `data-control`; they pick up id, state and
+  `aria-describedby` through `useFormField()`. The anatomy is documented in Storybook (Forms/Anatomy).
+- **Text components add themselves** ("(optional)", "Clear", "Error:") comes from `useMessages()`,
+  never from hard-coded English. A new key goes into every catalog in `packages/vue/src/i18n/`
+  (en, nl, fr, de). Labels, hints and errors are passed in by the app.
 - **Variants:** define them with `cva` and write every class name out in full, because Tailwind
   scans the source. Never build class names with string interpolation.
 - **Class merging:** root elements use `useClasses()` with `defineOptions({ inheritAttrs: false })`
@@ -109,7 +116,9 @@ pass. If a request would conflict with this rule, say so rather than silently co
 - **Forms:**
   - Every input has a programmatic label; use `OField`.
   - Hints and errors are linked with `aria-describedby`, and invalid fields get `aria-invalid`.
-  - Required fields are marked both visually and programmatically (1.3.1, 3.3.1, 3.3.2).
+  - Required fields are marked both visually and programmatically (1.3.1, 3.3.1, 3.3.2). A
+    required `OFieldset` says so in its legend, since a group has no `required` attribute.
+  - Errors are text with a labelled icon, never only a red border.
 - **Target size:** pointer targets are at least **24×24 CSS px**, or have enough spacing (2.5.8).
 - **Status messages:** loading, success and error announcements use `role="status"` or
   `role="alert"` / live regions (4.1.3).

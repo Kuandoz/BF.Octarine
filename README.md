@@ -125,6 +125,31 @@ To add a theme, write a `Theme` in `packages/tokens/src/themes/` and register it
 - **Changing the icon set:** add an `IconSetSource` in `packages/icons/scripts/sets/` that maps the
   vendor's names and styles onto Octarine names and variants. Templates don't change.
 
+## Forms
+
+```vue
+<OForm markers="both" @submit.prevent="save">
+  <OField label="Name" required>
+    <OInput v-model="name" autocomplete="name" />
+  </OField>
+  <OField label="Website" hint="Shown on your profile." :max-length="60">
+    <OInput v-model="site" icon="globe-alt" prefix="https://" clearable />
+  </OField>
+  <OFieldset legend="Date of birth" :error="dateError">…</OFieldset>
+</OForm>
+```
+
+- **Anatomy:** label (with `*` or `(optional)`), an optional `#label-action`, the hint _above_ the
+  control, the control frame with its adornments, then the error (as well as the hint) and the
+  counter. Storybook's **Forms/Anatomy** page shows every part and its accessibility rules.
+- **Markers:** `OForm`'s `markers` is `required` (default: `*`, plus a note explaining it),
+  `optional` or `both`. A field or group can override it.
+- **Languages:** the words Octarine adds follow the `OForm`'s `lang`, else `<html lang>`. English,
+  Dutch, French and German are built in; add or change others with
+  `app.use(createMessages({ es: { optional: '(opcional)', … } }))`.
+- **Your own controls** draw their box with `OControlFrame` and get id, state and
+  `aria-describedby` from `useFormField()`.
+
 ## Conventions
 
 - **Use semantic colors in components** (`bg-surface`, `text-fg-muted`, `bg-danger-subtle`) and avoid primitives.
