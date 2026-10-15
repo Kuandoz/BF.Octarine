@@ -49,8 +49,9 @@ export const Part = ({ n, pin = 'top-left', className = '', children }) => (
   </span>
 )
 
-export const Frame = ({ className = '', children }) => (
+export const Frame = ({ className = '', disabled, children }) => (
   <span
+    aria-disabled={disabled || undefined}
     className={`theme-border flex min-h-(--oct-control-height-md) w-full items-center gap-2 rounded-input bg-surface px-(--oct-input-px) text-body text-fg ${className}`}
   >
     {children}
@@ -69,9 +70,9 @@ export const State = ({ name, note, children }) => (
 
 # Field anatomy
 
-The parts a form field is built from, and what each one must do. **This is the target design:**
-parts marked _planned_ below don't exist in `OField` / `OInput` yet. Switch **Theme** and **Mode**
-in the toolbar: the diagram uses the same tokens as the components.
+The parts a form field is built from, and what each one must do. They are built by `OField`,
+`OInput` (in an `OControlFrame`), `OFieldset` and `OForm`. Switch **Theme**, **Mode** and
+**Language** in the toolbar: the diagram uses the same tokens as the components.
 
 <div className="sb-unstyled my-8">
   <div
@@ -128,18 +129,18 @@ in the toolbar: the diagram uses the same tokens as the components.
   </div>
 </div>
 
-| #   | Part                             | Element                                       | Rules                                                                                                                                                                                              |
-| --- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Label**                        | `<label for>`                                 | Always visible. A placeholder never replaces it.                                                                                                                                                   |
-| 2   | **Required/optional marker**     | text inside the label                         | `*` for required, `(optional)` for optional, or both (see below). The text follows the form's language. The control still gets `required`, so screen readers announce it.                          |
-| 3   | **Label action** _planned_       | slot                                          | An optional link or toggletip ("Forgot password?"). It is its own focusable element, before the control in tab order.                                                                              |
-| 4   | **Hint**                         | `<p id>`                                      | **Above** the control, so it's read before typing and the on-screen keyboard or autofill can't cover it. Linked with `aria-describedby`.                                                           |
-| 5   | **Control frame** _planned_      | `OControlFrame`                               | Draws the border, background, radius and focus ring (`focus-within`), so adornments sit inside the box. Shared by `OInput`, `OTextarea` and `OSelect`.                                             |
-| 6   | **Leading adornment** _planned_  | `icon` / `prefix` props, `#leading` slot      | A decorative icon (`aria-hidden`), or prefix text such as `€` or `https://`. Prefix text carries meaning, so it is linked to the control with `aria-describedby`.                                  |
-| 7   | **Native control**               | `<input>`, `<textarea>`, `<select>`           | Gets `id`, `required`, `disabled` / `readonly`, `aria-invalid` and `aria-describedby`.                                                                                                             |
-| 8   | **Trailing adornment** _planned_ | `suffix`, `clearable` props, `#trailing` slot | Suffix text, a status icon (error, or `OSpinner` while loading), and actions (clear, show password). Actions are real `<button>`s with a translated `aria-label` and a target of at least 24×24px. |
-| 9   | **Error message**                | `<p id>`                                      | Shown **as well as** the hint, below the control. An icon labelled "Error:" plus text, so color is not the only signal. Linked with `aria-describedby` after the hint.                             |
-| 10  | **Counter** _planned_            | `<p id>`                                      | Optional. A polite live region that only speaks near the limit ("5 characters left"), not on every keystroke.                                                                                      |
+| #   | Part                         | Element                                       | Rules                                                                                                                                                                                              |
+| --- | ---------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Label**                    | `<label for>`                                 | Always visible. A placeholder never replaces it.                                                                                                                                                   |
+| 2   | **Required/optional marker** | text inside the label                         | `*` for required, `(optional)` for optional, or both (see below). The text follows the form's language. The control still gets `required`, so screen readers announce it.                          |
+| 3   | **Label action**             | `#label-action` slot                          | An optional link or toggletip ("Forgot password?"). It is its own focusable element, before the control in tab order.                                                                              |
+| 4   | **Hint**                     | `<p id>`                                      | **Above** the control, so it's read before typing and the on-screen keyboard or autofill can't cover it. Linked with `aria-describedby`.                                                           |
+| 5   | **Control frame**            | `OControlFrame`                               | Draws the border, background, radius and focus ring (when the native control has visible focus), so adornments sit inside the box. `OInput` uses it; so can your own controls.                     |
+| 6   | **Leading adornment**        | `icon` / `prefix` props, `#leading` slot      | A decorative icon (`aria-hidden`), or prefix text such as `€` or `https://`. Prefix text carries meaning, so it is linked to the control with `aria-describedby`.                                  |
+| 7   | **Native control**           | `<input>`, `<textarea>`, `<select>`           | Gets `id`, `required`, `disabled` / `readonly`, `aria-invalid` and `aria-describedby`.                                                                                                             |
+| 8   | **Trailing adornment**       | `suffix`, `clearable` props, `#trailing` slot | Suffix text, a status icon (error, or `OSpinner` while loading), and actions (clear, show password). Actions are real `<button>`s with a translated `aria-label` and a target of at least 24×24px. |
+| 9   | **Error message**            | `<p id>`                                      | Shown **as well as** the hint, below the control. An icon labelled "Error:" plus text, so color is not the only signal. Linked with `aria-describedby` after the hint.                             |
+| 10  | **Counter**                  | `maxLength` prop                              | Optional. A polite live region that only speaks near the limit ("5 characters left"), not on every keystroke.                                                                                      |
 
 The control's `aria-describedby` lists, in order: the prefix/suffix text, the hint, the error and
 the counter. The field decides _what_ the error says; _when_ it appears is up to the form (on
@@ -148,7 +149,7 @@ blur, on submit, …).
 ## Layout
 
 Fields are **stacked**: label, hint, control and message, top to bottom. There is no
-label-beside-control variant. The gaps come from theme tokens (`--oct-field-gap`, _planned_), so a
+label-beside-control variant. The gaps come from theme tokens (`--oct-field-gap`), so a
 dense theme (Circuit) and a roomy one (Vellum) space fields differently.
 
 ## States
@@ -168,7 +169,9 @@ dense theme (Circuit) and a roomy one (Vellum) space fields differently.
       </Frame>
     </State>
     <State name="Disabled" note="grayed out: sunken and dimmed, label too">
-      <Frame className="border-border-strong bg-surface-sunken opacity-50">Unavailable</Frame>
+      <Frame disabled className="border-border-strong bg-surface-sunken opacity-50">
+        Unavailable
+      </Frame>
     </State>
     <State name="Invalid" note="danger border and icon, plus the error message">
       <Frame className="border-danger">
@@ -182,7 +185,7 @@ dense theme (Circuit) and a roomy one (Vellum) space fields differently.
         <Icon icon={arrowPath} className="text-fg-muted" />
       </Frame>
     </State>
-    <State name="Valid (optional)" note="only when a check ran, e.g. a free username">
+    <State name="Valid" note="not built in: add the icon in #trailing, only after a check ran">
       <Frame className="border-border-strong">
         <span className="flex-1">octarine</span>
         <Icon icon={checkCircle} className="text-success" />
@@ -191,11 +194,12 @@ dense theme (Circuit) and a roomy one (Vellum) space fields differently.
   </ul>
 </div>
 
-## Groups: `OFieldset` _planned_
+## Groups: `OFieldset`
 
 Radio buttons, checkboxes and inputs split into parts (day / month / year) share one label. They
 use a `<fieldset>` with a `<legend>` instead of a `<label>`, and have the same marker, hint, error
-and layout as a field. Controls inside pick up `invalid` and `disabled` from the group.
+and layout as a field. Controls inside pick up `invalid` and `disabled` from the group. A required
+group says "required" to screen readers in its legend, because a group has no `required` attribute.
 
 ```
 ┌ fieldset ───────────────────────────┐
@@ -208,7 +212,8 @@ and layout as a field. Controls inside pick up `invalid` and `disabled` from the
 
 ## Required and optional markers
 
-Forms choose how fields are marked, and a field can override it:
+`<OForm markers="…">` chooses how its fields are marked (default `required`), and a field or group
+can override it with its own `markers`. The note only appears when a field shows a `*`.
 
 | Mode       | Required field | Optional field       | Note at the top of the form      |
 | ---------- | -------------- | -------------------- | -------------------------------- |
@@ -226,9 +231,11 @@ Text that Octarine writes itself must follow the language of the form, not just 
 `(optional)`, the required note, the counter, the "Error:" label and the names of actions like
 _Clear_ or _Show password_.
 
-- **Which language:** the nearest `lang` attribute, so `<form lang="fr">` inside an English page
-  gets French. Without one, `<html lang>`, which every app must set anyway (WCAG 3.1.1).
-- **Where the text comes from:** Octarine ships English and lets the app add or override languages
-  (planned: `app.use(createMessages({ nl: { optional: 'optioneel', … } }))`). A missing language
-  falls back to English and warns once in development.
+- **Which language:** the `lang` of the enclosing `OForm`, so `<OForm lang="fr">` inside an English
+  page gets French. Without one, `<html lang>`, which every app must set anyway (WCAG 3.1.1).
+  Octarine follows changes to `<html lang>` while the app runs.
+- **Where the text comes from:** Octarine ships English, Dutch, French and German. Apps add
+  languages or change words with `app.use(createMessages({ es: { optional: '(opcional)', … } }))`.
+  A regional tag (`nl-BE`) uses its own entry, then the language's, then English; an unknown
+  language falls back to English with a console warning.
 - Text the app passes in (label, hint, error) is the app's job to translate.
