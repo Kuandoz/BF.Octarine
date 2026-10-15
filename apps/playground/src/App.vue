@@ -5,6 +5,7 @@ import {
   OCard,
   OField,
   OHeading,
+  OIcon,
   OInput,
   OStack,
   OText,
@@ -53,7 +54,12 @@ async function submit() {
             <option v-for="t in themes" :key="t.name" :value="t.name">{{ t.label }}</option>
           </select>
         </OField>
-        <OButton variant="outline" intent="neutral" @click="toggle">
+        <OButton
+          variant="outline"
+          intent="neutral"
+          :icon="resolved === 'dark' ? 'sun' : 'moon'"
+          @click="toggle"
+        >
           {{ resolved === 'dark' ? 'Light' : 'Dark' }} mode
         </OButton>
       </OStack>
@@ -75,14 +81,17 @@ async function submit() {
 
     <OCard as="form" variant="elevated" novalidate @submit.prevent="submit">
       <template #header>
-        <OHeading :level="2" :size="3">Join the newsletter</OHeading>
+        <OHeading :level="2" :size="3" class="flex items-center gap-2">
+          <OIcon name="envelope" variant="solid" intent="primary" />
+          Join the newsletter
+        </OHeading>
       </template>
       <OField label="Email address" hint="One email a month, no spam." :error="emailError" required>
         <OInput v-model="email" type="email" placeholder="you@example.com" />
       </OField>
       <template #footer>
-        <OButton variant="ghost" intent="neutral" @click="email = ''">Clear</OButton>
-        <OButton type="submit" :loading="saving">Subscribe</OButton>
+        <OButton variant="ghost" intent="neutral" icon="x-mark" @click="email = ''">Clear</OButton>
+        <OButton type="submit" :loading="saving" icon-end="paper-airplane">Subscribe</OButton>
       </template>
     </OCard>
   </main>

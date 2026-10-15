@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@octarine/icons": "workspace:*",
     "@octarine/tailwind": "workspace:*",
     "@octarine/tokens": "workspace:*",
     "@octarine/vue": "workspace:*",
