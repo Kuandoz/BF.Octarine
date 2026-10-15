@@ -1,5 +1,5 @@
-/* `dark:` follows the explicit theme switch instead of the OS preference. */
-@custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
+/* `dark:` follows the explicit mode switch (data-mode / .dark) instead of the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *, [data-mode='dark'], [data-mode='dark'] *));
 
 @layer base {
   html {

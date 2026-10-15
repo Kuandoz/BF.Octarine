@@ -9,6 +9,7 @@
       "default": "./dist/index.css"
     },
     "./theme.css": "./dist/theme.css",
+    "./text-styles.css": "./dist/text-styles.css",
     "./base.css": "./dist/base.css",
     "./utilities.css": "./dist/utilities.css"
   },

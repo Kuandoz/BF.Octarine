@@ -12,4 +12,14 @@
   transition-property: color, background-color, border-color, box-shadow, opacity, transform;
   transition-duration: var(--oct-duration-normal);
   transition-timing-function: var(--oct-ease-standard);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s;
+  }
+}
+
+/* Theme-controlled border width, so each theme decides how heavy outlines are. */
+@utility theme-border {
+  border-style: solid;
+  border-width: var(--oct-border-width);
 }
