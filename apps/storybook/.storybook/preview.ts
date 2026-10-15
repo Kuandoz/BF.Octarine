@@ -1,5 +1,7 @@
 import { setup, type Decorator, type Preview } from '@storybook/vue3-vite'
 import { defaultTheme, themes } from '@octarine/tokens'
+import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events'
+import { addons } from 'storybook/preview-api'
 import { createIcons } from '../../../packages/vue/src'
 import icons from 'virtual:octarine-icons'
 import './styles.css'
@@ -30,6 +32,14 @@ const withTheme: Decorator = (story, context) => {
 }
 
 apply(defaultTheme.name, 'light')
+
+// Docs-only pages (MDX without stories) never run decorators, so follow the
+// toolbar directly as well.
+const followGlobals = ({ globals }: { globals: Record<string, string | undefined> }) =>
+  apply(globals.theme ?? defaultTheme.name, globals.mode ?? 'light')
+const channel = addons.getChannel()
+channel.on(SET_GLOBALS, followGlobals)
+channel.on(GLOBALS_UPDATED, followGlobals)
 
 // Icons the stories use, found by the octarine-icons Vite plugin.
 setup((app) => {
