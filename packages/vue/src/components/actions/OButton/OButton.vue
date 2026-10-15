@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed, useAttrs, useSlots } from 'vue'
 import OSpinner from '../../feedback/OSpinner/OSpinner.vue'
+import OIcon from '../../foundations/OIcon/OIcon.vue'
+import { normalizeIcon, type IconProp, type IconSize } from '../../foundations/OIcon/icon'
 import { useClasses } from '../../../composables/useClasses'
 import { cva, type VariantProps } from '../../../utils/variants'
 
@@ -30,6 +33,10 @@ const button = cva(
       },
       block: {
         true: 'w-full',
+      },
+      /** Square: the min width equals the height. */
+      iconOnly: {
+        true: 'px-0',
       },
     },
     compoundVariants: [
@@ -102,6 +109,13 @@ const props = withDefaults(
     disabled?: boolean
     /** Shows a spinner in place of the leading icon and blocks interaction. */
     loading?: boolean
+    /**
+     * Leading icon: a name, an imported icon or `OIcon` props. Without a label the
+     * button is icon-only and needs an `aria-label`.
+     */
+    icon?: IconProp
+    /** Trailing icon. */
+    iconEnd?: IconProp
   }>(),
   {
     variant: 'solid',
@@ -120,7 +134,29 @@ defineSlots<{
   trailing?: () => unknown
 }>()
 
-const { classes, attrs } = useClasses(() => button(props))
+const slots = useSlots()
+const iconOnly = computed(() => Boolean(props.icon) && !slots.default)
+
+const iconSize: Record<NonNullable<ButtonVariants['size']>, IconSize> = {
+  sm: 'sm',
+  md: 'md',
+  lg: 'lg',
+}
+// The button sets the size; the icon's own props win. Icons follow the button's
+// text color and disabled styling, so `disabled` isn't passed on.
+const withSize = (icon: IconProp | undefined) => {
+  const normalized = normalizeIcon(icon)
+  return normalized && { size: iconSize[props.size], ...normalized }
+}
+const leadingIcon = computed(() => withSize(props.icon))
+const trailingIcon = computed(() => withSize(props.iconEnd))
+
+const allAttrs = useAttrs()
+if (iconOnly.value && !allAttrs['aria-label'] && !allAttrs['aria-labelledby']) {
+  console.warn('[OButton] an icon-only button needs an aria-label (WCAG 4.1.2).')
+}
+
+const { classes, attrs } = useClasses(() => button({ ...props, iconOnly: iconOnly.value }))
 </script>
 
 <template>
@@ -132,8 +168,12 @@ const { classes, attrs } = useClasses(() => button(props))
     :aria-busy="loading || undefined"
   >
     <OSpinner v-if="loading" size="sm" label="" />
-    <slot v-else name="leading" />
+    <slot v-else name="leading">
+      <OIcon v-if="leadingIcon" v-bind="leadingIcon" />
+    </slot>
     <slot />
-    <slot name="trailing" />
+    <slot name="trailing">
+      <OIcon v-if="trailingIcon" v-bind="trailingIcon" />
+    </slot>
   </button>
 </template>

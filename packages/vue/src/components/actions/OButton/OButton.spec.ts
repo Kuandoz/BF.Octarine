@@ -1,5 +1,6 @@
+import { trash } from '@octarine/icons/heroicons/outline'
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import OButton from './OButton.vue'
 
 describe('OButton', () => {
@@ -29,5 +30,41 @@ describe('OButton', () => {
     expect(wrapper.attributes('disabled')).toBeDefined()
     expect(wrapper.attributes('aria-busy')).toBe('true')
     expect(wrapper.find('.icon').exists()).toBe(false)
+  })
+})
+
+describe('OButton icons', () => {
+  it('renders leading and trailing icons, sized to the button and hidden from assistive tech', () => {
+    const wrapper = mount(OButton, {
+      props: { icon: trash, iconEnd: { icon: trash, size: 'lg' }, size: 'sm' },
+      slots: { default: 'Delete' },
+    })
+    const [leading, trailing] = wrapper.findAll('svg')
+    expect(leading!.classes()).toContain('icon-sm')
+    expect(trailing!.classes()).toContain('icon-lg')
+    expect(leading!.attributes('aria-hidden')).toBe('true')
+    expect(wrapper.text()).toBe('Delete')
+    expect(wrapper.classes()).not.toContain('px-0')
+  })
+
+  it('is square when icon-only and keeps its accessible name', () => {
+    const wrapper = mount(OButton, { props: { icon: trash }, attrs: { 'aria-label': 'Delete' } })
+    expect(wrapper.classes()).toContain('px-0')
+    expect(wrapper.attributes('aria-label')).toBe('Delete')
+  })
+
+  it('warns when an icon-only button has no accessible name', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mount(OButton, { props: { icon: trash } })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('needs an aria-label'))
+    warn.mockRestore()
+  })
+
+  it('shows the spinner instead of the leading icon while loading', () => {
+    const wrapper = mount(OButton, {
+      props: { icon: trash, loading: true },
+      slots: { default: 'Save' },
+    })
+    expect(wrapper.find('svg').exists()).toBe(false)
   })
 })

@@ -175,6 +175,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@octarine/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@octarine/tailwind':
         specifier: workspace:*
         version: link:../../packages/tailwind
@@ -209,6 +212,9 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@octarine/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@octarine/tailwind':
         specifier: workspace:*
         version: link:../../packages/tailwind
@@ -304,6 +310,9 @@ importers:
 
   packages/vue:
     dependencies:
+      '@octarine/icons':
+        specifier: workspace:*
+        version: link:../icons
       '@octarine/tokens':
         specifier: workspace:*
         version: link:../tokens

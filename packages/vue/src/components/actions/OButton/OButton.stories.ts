@@ -55,3 +55,23 @@ export const Sizes: Story = {
 
 export const Loading: Story = { args: { loading: true } }
 export const Disabled: Story = { args: { disabled: true } }
+
+/**
+ * `icon` / `iconEnd` take a name, an imported icon or a full set of `OIcon`
+ * props. Icon-only buttons need an `aria-label`.
+ */
+export const WithIcons: Story = {
+  render: () => ({
+    components: { OButton },
+    template: `
+      <div class="flex flex-wrap items-center gap-3">
+        <OButton icon="plus">New project</OButton>
+        <OButton variant="outline" intent="danger" :icon="{ name: 'trash', variant: 'mini' }">Delete</OButton>
+        <OButton variant="soft" icon-end="arrow-right">Continue</OButton>
+        <OButton variant="ghost" intent="neutral" icon="cog-6-tooth" aria-label="Settings" />
+        <OButton size="sm" variant="outline" intent="neutral" icon="x-mark" aria-label="Close" />
+        <OButton disabled icon="paper-airplane">Send</OButton>
+      </div>
+    `,
+  }),
+}

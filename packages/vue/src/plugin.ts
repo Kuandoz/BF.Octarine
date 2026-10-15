@@ -1,4 +1,4 @@
-import type { App, Plugin } from 'vue'
+import type { App, Component, Plugin } from 'vue'
 import * as components from './components'
 
 /**
@@ -8,7 +8,8 @@ import * as components from './components'
 export const Octarine: Plugin = {
   install(app: App) {
     for (const [name, component] of Object.entries(components)) {
-      app.component(name, component)
+      // Component folders also export helpers (`normalizeIcon`, …); register only components.
+      if (/^O[A-Z]/.test(name)) app.component(name, component as Component)
     }
   },
 }
