@@ -83,3 +83,57 @@ describe('when errors are shown', () => {
     expect(engine.getError('code')).toBe("This value isn't valid.")
   })
 })
+
+describe('getErrors', () => {
+  const definition: FormDefinition = {
+    components: [
+      { type: 'text', path: 'name' },
+      {
+        type: 'repeat',
+        path: 'items',
+        components: [{ type: 'text', path: 'title' }],
+      },
+      { type: 'text', path: 'email' },
+    ],
+    validations: {
+      email: [{ type: 'required' }],
+      'items.*.title': [{ type: 'required' }],
+      name: [{ type: 'required' }],
+      terms: [{ type: 'required' }],
+    },
+  }
+  const model = () => ({ items: Array.from({ length: 11 }, () => ({})) })
+
+  it('lists nothing before errors are shown', () => {
+    const engine = new FormEngine(definition, model())
+    engine.validateModel()
+    expect(engine.getErrors()).toEqual([])
+  })
+
+  it('lists shown errors in the order the fields appear, rows in order, unrendered paths last', () => {
+    const engine = new FormEngine(definition, model())
+    engine.submit()
+    const paths = engine.getErrors().map((error) => error.path)
+    expect(paths).toEqual([
+      'name',
+      ...Array.from({ length: 11 }, (_, i) => `items.${i}.title`),
+      'email',
+      'terms',
+    ])
+    expect(engine.getErrors()[0]).toEqual({ path: 'name', message: 'This field is required.' })
+  })
+
+  it('lists only touched fields before a submit', () => {
+    const engine = new FormEngine(definition, model())
+    engine.touch('email')
+    expect(engine.getErrors()).toEqual([{ path: 'email', message: 'This field is required.' }])
+  })
+
+  it('forgets the errors of a removed row', () => {
+    const engine = new FormEngine(definition, { items: [{}, {}] })
+    engine.submit()
+    engine.removeRepeatItem('items', 1)
+    expect(engine.getErrors().map((error) => error.path)).not.toContain('items.1.title')
+    expect(engine.getErrors().map((error) => error.path)).toContain('items.0.title')
+  })
+})

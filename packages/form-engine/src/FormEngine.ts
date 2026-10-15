@@ -151,6 +151,32 @@ export class FormEngine {
     return result.message || this._translate('formRenderer.validation.invalid')
   }
 
+  // Every error getError would show, in the order the fields appear on
+  // screen, rows in row order; paths no field renders come last. For an error
+  // summary at the top of the form.
+  getErrors(): Array<{ path: string; message: string }> {
+    const order = [...this._hideConditions.keys()]
+    const position = (path: string) => {
+      const segments = this.resolvePathContext(path).wildcardPath.split('.')
+      for (let length = segments.length; length > 0; length--) {
+        const index = order.indexOf(segments.slice(0, length).join('.'))
+        if (index !== -1) return index
+      }
+      return order.length
+    }
+
+    const errors: Array<{ path: string; message: string }> = []
+    for (const path of Object.keys(this._validationResults)) {
+      const message = this.getError(path)
+      if (message !== undefined) errors.push({ path, message })
+    }
+    return errors.sort(
+      (a, b) =>
+        position(a.path) - position(b.path) ||
+        a.path.localeCompare(b.path, undefined, { numeric: true }),
+    )
+  }
+
   isDirty(path: string): boolean {
     return this._dirtyPaths.has(path)
   }
@@ -229,6 +255,7 @@ export class FormEngine {
 
   validateModel(): boolean {
     let valid = true
+    const validated = new Set<string>()
     for (const [wildcardKey, rules] of Object.entries(this.definition.validations ?? {})) {
       for (const { path, repeatContext } of this.expandWildcardPaths(wildcardKey)) {
         const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
@@ -236,8 +263,13 @@ export class FormEngine {
           ? { valid: true }
           : this._validationService.validate(rules, this.getValue(path), path, scope, this._model)
         this._validationResults[path] = result
+        validated.add(path)
         if (!result.valid) valid = false
       }
+    }
+    // Rows that were removed leave results behind; drop them.
+    for (const path of Object.keys(this._validationResults)) {
+      if (!validated.has(path)) delete this._validationResults[path]
     }
     return valid
   }
