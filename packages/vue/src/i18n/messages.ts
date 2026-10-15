@@ -11,6 +11,8 @@ export interface Messages {
   requiredNote: string
   /** Label of the icon in front of an error message. */
   error: string
+  /** Heading of the list of errors shown after a failed submit. */
+  errorSummary: string
   /** Button that empties an input. */
   clear: string
   /** A control that is checking or fetching something. */
@@ -26,6 +28,7 @@ const en: Messages = {
   required: '(required)',
   requiredNote: 'Fields marked * are required.',
   error: 'Error:',
+  errorSummary: 'There is a problem',
   clear: 'Clear',
   loading: 'Loading',
   maxLength: (max) => `You can enter up to ${max} characters.`,
@@ -38,6 +41,7 @@ const nl: Messages = {
   required: '(verplicht)',
   requiredNote: 'Velden met * zijn verplicht.',
   error: 'Fout:',
+  errorSummary: 'Er is een probleem',
   clear: 'Wissen',
   loading: 'Bezig met laden',
   maxLength: (max) => `Je kunt maximaal ${max} tekens invullen.`,
@@ -51,6 +55,7 @@ const fr: Messages = {
   required: '(obligatoire)',
   requiredNote: 'Les champs marqués d’un * sont obligatoires.',
   error: 'Erreur :',
+  errorSummary: 'Il y a un problème',
   clear: 'Effacer',
   loading: 'Chargement',
   maxLength: (max) => `Vous pouvez saisir jusqu’à ${max} caractères.`,
@@ -63,6 +68,7 @@ const de: Messages = {
   required: '(Pflichtfeld)',
   requiredNote: 'Mit * markierte Felder sind Pflichtfelder.',
   error: 'Fehler:',
+  errorSummary: 'Es ist ein Problem aufgetreten',
   clear: 'Eingabe löschen',
   loading: 'Wird geladen',
   maxLength: (max) => `Sie können bis zu ${max} Zeichen eingeben.`,
