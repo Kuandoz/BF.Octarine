@@ -6,19 +6,23 @@ A design system built with Vue 3 and Tailwind CSS v4, split into layered package
 @octarine/tokens  ──►  @octarine/tailwind  ──┐
                                             ├──►  @octarine/vue  ──►  apps (storybook, playground)
 @octarine/icons  ───────────────────────────┘
+
+@octarine/form-engine   (Vue only, no styling)
 ```
 
-Each layer depends only on the layers to its left. `@octarine/icons` depends on nothing.
+Each layer depends only on the layers to its left. `@octarine/icons` depends on nothing, and
+`@octarine/form-engine` only on Vue.
 
-| Package                                   | What it holds                                                                                                                                                                                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@octarine/tokens`](packages/tokens)     | The source of truth, with no framework code. Global **primitives** (type scale, spacing), **semantic** token names (`surface`, `fg-muted`, `primary`, text styles) and the **themes** that fill them. Builds to `tokens.css` (default theme), `themes/*.css` and `tokens.json`. |
-| [`@octarine/tailwind`](packages/tailwind) | Maps the tokens onto Tailwind's `@theme`, plus base styles and shared utilities. Consumers import this instead of `tailwindcss`.                                                                                                                                                |
-| [`@octarine/icons`](packages/icons)       | Icons as plain data: the [Heroicons](https://heroicons.com) set (MIT) in four variants, Octarine's own icons (`octarine:*`) and a **Vite plugin** that bundles only the icons the source uses. No framework code.                                                               |
-| [`@octarine/vue`](packages/vue)           | Vue components styled only with theme utilities. Each component lives in its own folder with its story and tests.                                                                                                                                                               |
-| [`apps/storybook`](apps/storybook)        | Component explorer, plus Foundations pages (colors, typography, spacing) generated from the tokens.                                                                                                                                                                             |
-| [`apps/playground`](apps/playground)      | A small app that uses the _built_ packages the way an external project would.                                                                                                                                                                                                   |
-| [`assets/brand`](assets/brand)            | Octarine logos and mark (SVG).                                                                                                                                                                                                                                                  |
+| Package                                         | What it holds                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@octarine/tokens`](packages/tokens)           | The source of truth, with no framework code. Global **primitives** (type scale, spacing), **semantic** token names (`surface`, `fg-muted`, `primary`, text styles) and the **themes** that fill them. Builds to `tokens.css` (default theme), `themes/*.css` and `tokens.json`. |
+| [`@octarine/tailwind`](packages/tailwind)       | Maps the tokens onto Tailwind's `@theme`, plus base styles and shared utilities. Consumers import this instead of `tailwindcss`.                                                                                                                                                |
+| [`@octarine/icons`](packages/icons)             | Icons as plain data: the [Heroicons](https://heroicons.com) set (MIT) in four variants, Octarine's own icons (`octarine:*`) and a **Vite plugin** that bundles only the icons the source uses. No framework code.                                                               |
+| [`@octarine/form-engine`](packages/form-engine) | Renders forms from a JSON definition: reactive model, validation, expression-based conditions, localisation and lists. Headless: field components register themselves by `type`.                                                                                                |
+| [`@octarine/vue`](packages/vue)                 | Vue components styled only with theme utilities. Each component lives in its own folder with its story and tests.                                                                                                                                                               |
+| [`apps/storybook`](apps/storybook)              | Component explorer, plus Foundations pages (colors, typography, spacing) generated from the tokens.                                                                                                                                                                             |
+| [`apps/playground`](apps/playground)            | A small app that uses the _built_ packages the way an external project would.                                                                                                                                                                                                   |
+| [`assets/brand`](assets/brand)                  | Octarine logos and mark (SVG).                                                                                                                                                                                                                                                  |
 
 ## Getting started
 

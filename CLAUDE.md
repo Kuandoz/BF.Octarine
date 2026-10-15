@@ -9,13 +9,15 @@ full overview.
 packages/tokens    → design tokens + themes (TS source of truth → tokens.css, themes/*.css, tokens.json)
 packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
 packages/icons     → icon data (Heroicons + octarine:*), SVG converter, Vite plugin (octarineIcons)
+packages/form-engine → headless JSON-form engine: model, validation, conditions, localisation, lists
 packages/vue       → Vue components (one folder per component: .vue, .stories.ts, .spec.ts, index.ts)
 apps/storybook     → Storybook 10 (component stories + Foundations MDX pages)
 apps/playground    → demo app consuming the *built* packages
 assets/brand       → Octarine logos (SVG)
 ```
 
-Each layer may only depend on the layers above it in this list; `icons` depends on nothing.
+Each layer may only depend on the layers above it in this list; `icons` depends on nothing, and
+`form-engine` only on Vue (it has no styling).
 `tokens` and `icons` contain no Tailwind or Vue code. Components use no raw color values.
 
 ## Commands
