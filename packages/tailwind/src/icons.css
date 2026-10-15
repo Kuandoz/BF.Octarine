@@ -4,6 +4,8 @@
  * stroke width; multi-color icons set their own on their paths.
  */
 @utility icon {
+  /* Preflight makes svg a block; icons sit inline in text. */
+  display: inline-block;
   width: var(--oct-icon-size, 1em);
   height: var(--oct-icon-size, 1em);
   flex-shrink: 0;
