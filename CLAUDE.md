@@ -8,14 +8,15 @@ full overview.
 ```
 packages/tokens    → design tokens + themes (TS source of truth → tokens.css, themes/*.css, tokens.json)
 packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
+packages/icons     → icon data (Heroicons + octarine:*), SVG converter, Vite plugin (octarineIcons)
 packages/vue       → Vue components (one folder per component: .vue, .stories.ts, .spec.ts, index.ts)
 apps/storybook     → Storybook 10 (component stories + Foundations MDX pages)
 apps/playground    → demo app consuming the *built* packages
 assets/brand       → Octarine logos (SVG)
 ```
 
-Each layer may only depend on the layers above it in this list. `tokens` contains no Tailwind or
-Vue code. Components use no raw color values.
+Each layer may only depend on the layers above it in this list; `icons` depends on nothing.
+`tokens` and `icons` contain no Tailwind or Vue code. Components use no raw color values.
 
 ## Commands
 
@@ -23,9 +24,9 @@ pnpm may not be on PATH; prefix with `npx pnpm` if `pnpm` is not found.
 
 ```sh
 pnpm install
-pnpm build            # all packages (tokens → tailwind → vue)
-pnpm build:foundation # tokens + tailwind only (needed after token changes)
-pnpm test             # contrast spec (every theme × mode) + Vitest component specs
+pnpm build            # all packages (tokens → tailwind, icons → vue)
+pnpm build:foundation # tokens + tailwind + icons (needed after token or icon changes)
+pnpm test             # contrast spec (every theme × mode), icons + Vitest component specs
 pnpm typecheck
 pnpm storybook        # dev server on :6006
 pnpm format           # Prettier
@@ -47,6 +48,20 @@ Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` mus
 - **Typography:** use text-style utilities (`text-heading-2`, `text-body`, `text-caption`) instead of
   combining size, leading and weight by hand. They also set the family and case per theme, so
   don't add `font-display`, `font-mono` or `uppercase` next to them.
+- **Icons:** use `OIcon` (or an `icon` prop) and never inline SVG markup in components.
+  - Apps use names (`<OIcon name="trash" variant="solid">`). The `octarineIcons()` Vite plugin
+    bundles only names it finds as quoted strings in the source, so write names out in full, like
+    class names. A variant is bundled when its string is in the same file as the name; otherwise add
+    `name/variant` to the plugin's `safelist`.
+  - Components inside `packages/vue` import icon definitions
+    (`import { xMark } from '@octarine/icons/heroicons/mini'`) and pass them as `:icon`, so they
+    never depend on the consumer's plugin.
+  - Icon data is converted and sanitized at build time. Never render SVG strings at runtime
+    (`v-html`, `DOMParser`).
+  - Color comes from `intent` (`currentColor`), never from fills. Disabled is `icon-disabled`.
+    Size and stroke width come from theme tokens.
+  - Icons are decorative (`aria-hidden`) unless they get a `label`. Icon-only buttons need an
+    `aria-label`.
 - **Variants:** define them with `cva` and write every class name out in full, because Tailwind
   scans the source. Never build class names with string interpolation.
 - **Class merging:** root elements use `useClasses()` with `defineOptions({ inheritAttrs: false })`

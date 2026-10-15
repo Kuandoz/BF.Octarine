@@ -3,15 +3,18 @@
 A design system built with Vue 3 and Tailwind CSS v4, split into layered packages:
 
 ```
-@octarine/tokens  ──►  @octarine/tailwind  ──►  @octarine/vue  ──►  apps (storybook, playground)
+@octarine/tokens  ──►  @octarine/tailwind  ──┐
+                                            ├──►  @octarine/vue  ──►  apps (storybook, playground)
+@octarine/icons  ───────────────────────────┘
 ```
 
-Each layer depends only on the layers to its left.
+Each layer depends only on the layers to its left. `@octarine/icons` depends on nothing.
 
 | Package                                   | What it holds                                                                                                                                                                                                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@octarine/tokens`](packages/tokens)     | The source of truth, with no framework code. Global **primitives** (type scale, spacing), **semantic** token names (`surface`, `fg-muted`, `primary`, text styles) and the **themes** that fill them. Builds to `tokens.css` (default theme), `themes/*.css` and `tokens.json`. |
 | [`@octarine/tailwind`](packages/tailwind) | Maps the tokens onto Tailwind's `@theme`, plus base styles and shared utilities. Consumers import this instead of `tailwindcss`.                                                                                                                                                |
+| [`@octarine/icons`](packages/icons)       | Icons as plain data: the [Heroicons](https://heroicons.com) set (MIT) in four variants, Octarine's own icons (`octarine:*`) and a **Vite plugin** that bundles only the icons the source uses. No framework code.                                                               |
 | [`@octarine/vue`](packages/vue)           | Vue components styled only with theme utilities. Each component lives in its own folder with its story and tests.                                                                                                                                                               |
 | [`apps/storybook`](apps/storybook)        | Component explorer, plus Foundations pages (colors, typography, spacing) generated from the tokens.                                                                                                                                                                             |
 | [`apps/playground`](apps/playground)      | A small app that uses the _built_ packages the way an external project would.                                                                                                                                                                                                   |
@@ -32,6 +35,17 @@ pnpm build            # builds every package in packages/
 
 ## Using it in an app
 
+```ts
+// vite.config.ts
+import { octarineIcons } from '@octarine/icons/vite'
+export default defineConfig({ plugins: [vue(), tailwindcss(), octarineIcons()] })
+
+// main.ts
+import { createIcons } from '@octarine/vue'
+import icons from 'virtual:octarine-icons'
+createApp(App).use(createIcons(icons)).mount('#app')
+```
+
 ```css
 /* src/style.css */
 @import '@octarine/tailwind';
@@ -50,7 +64,7 @@ const { toggle } = useColorMode() // sets <html data-mode>
   <OField label="Email" hint="We never share it.">
     <OInput type="email" />
   </OField>
-  <OButton @click="toggle">Toggle dark mode</OButton>
+  <OButton icon="moon" @click="toggle">Toggle dark mode</OButton>
 </template>
 ```
 
@@ -74,6 +88,40 @@ from the logo gradient.
 
 To add a theme, write a `Theme` in `packages/tokens/src/themes/` and register it in
 `themes/index.ts`. The build emits its CSS and the contrast spec checks it.
+
+## Icons
+
+```vue
+<OIcon name="trash" variant="solid" intent="danger" disabled />
+<OIcon name="octarine:mark" size="lg" label="Octarine" />
+<OButton icon="plus">New</OButton>
+<OButton :icon="{ name: 'trash', variant: 'mini' }" intent="danger">Delete</OButton>
+<OButton icon="cog-6-tooth" aria-label="Settings" />
+```
+
+- **Finding icons:** the `octarineIcons()` Vite plugin scans `src` for quoted icon names, the way
+  Tailwind finds classes, and bundles only those as `virtual:octarine-icons`. Remove the last use
+  and the icon leaves the bundle. Write names out in full; never build them from parts.
+- **Variants** are `outline` (default), `solid`, `mini` and `micro`. A variant is bundled for a name
+  when the variant string appears in the same file. A name and variant that only meet across files
+  go in the plugin's `safelist` (`'trash/solid'`). A missing icon shows a dashed square and a
+  console warning.
+- **Types:** the plugin writes `src/octarine-icons.d.ts` (commit it), so `name` autocompletes and a
+  typo fails `typecheck`.
+- **Imports instead of names:** `import { trash } from '@octarine/icons/heroicons/solid'` with
+  `<OIcon :icon="trash" />` needs no plugin. Components inside `@octarine/vue` always do this.
+- **Your own icons:** `octarineIcons({ custom: { app: 'src/icons' } })` turns
+  `src/icons/invoice.svg` into `app:invoice`. SVGs are sanitized at build time. One-color icons
+  follow `currentColor`; gradients and multi-color icons (logos) keep their colors.
+- **Passing icons around:** `icon` props take a name, an imported icon or a full set of `OIcon`
+  props, so `<OIcon v-bind="spec" />` and `<OButton :icon="spec" />` take the same object.
+- **Layers:** `OIconLayers` stacks `OIcon`s, each placed with `transform` (`scale`, `x`, `y`,
+  `rotate`, `flipX`, `flipY`).
+- **Theming:** icon sizes, the outline stroke width and the disabled opacity are theme tokens.
+- **Accessibility:** icons are hidden from assistive tech unless they have a `label`. Icon-only
+  buttons need an `aria-label`. Never rely on an icon's color alone.
+- **Changing the icon set:** add an `IconSetSource` in `packages/icons/scripts/sets/` that maps the
+  vendor's names and styles onto Octarine names and variants. Templates don't change.
 
 ## Conventions
 
