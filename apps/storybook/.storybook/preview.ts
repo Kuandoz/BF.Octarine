@@ -1,5 +1,7 @@
-import type { Decorator, Preview } from '@storybook/vue3-vite'
+import { setup, type Decorator, type Preview } from '@storybook/vue3-vite'
 import { defaultTheme, themes } from '@octarine/tokens'
+import { createIcons } from '../../../packages/vue/src'
+import icons from 'virtual:octarine-icons'
 import './styles.css'
 
 /** Adds a theme's web-font stylesheet to <head> once (mirrors useTheme()). */
@@ -28,6 +30,11 @@ const withTheme: Decorator = (story, context) => {
 }
 
 apply(defaultTheme.name, 'light')
+
+// Icons the stories use, found by the octarine-icons Vite plugin.
+setup((app) => {
+  app.use(createIcons(icons))
+})
 
 const preview: Preview = {
   decorators: [withTheme],

@@ -7,6 +7,7 @@
     "build": "storybook build"
   },
   "dependencies": {
+    "@octarine/icons": "workspace:*",
     "@octarine/tailwind": "workspace:*",
     "@octarine/tokens": "workspace:*",
     "@octarine/vue": "workspace:*",
