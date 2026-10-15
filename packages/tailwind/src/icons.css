@@ -1,0 +1,34 @@
+/*
+ * Icons (OIcon). An icon is 1em square, so it follows the surrounding font size,
+ * unless a size utility sets --oct-icon-size. Outline icons inherit the theme's
+ * stroke width; multi-color icons set their own on their paths.
+ */
+@utility icon {
+  width: var(--oct-icon-size, 1em);
+  height: var(--oct-icon-size, 1em);
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+  stroke-width: var(--oct-icon-stroke-width);
+  forced-color-adjust: auto;
+}
+
+@utility icon-sm {
+  --oct-icon-size: var(--oct-icon-size-sm);
+}
+
+@utility icon-md {
+  --oct-icon-size: var(--oct-icon-size-md);
+}
+
+@utility icon-lg {
+  --oct-icon-size: var(--oct-icon-size-lg);
+}
+
+/*
+ * Disabled look. Grayscale also works on multi-color icons (logos). Disabled
+ * controls are exempt from contrast, so the parent control conveys the state.
+ */
+@utility icon-disabled {
+  filter: grayscale(1);
+  opacity: var(--oct-icon-disabled-opacity);
+}
