@@ -1,0 +1,55 @@
+{
+  "name": "@octarine/icons",
+  "version": "0.1.0",
+  "description": "Octarine icons: framework-agnostic icon data, the Heroicons set, Octarine's own icons and a Vite plugin that bundles only the icons you use.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./heroicons/*.json": "./dist/heroicons/*.json",
+    "./heroicons/*": {
+      "types": "./dist/heroicons/*.d.ts",
+      "import": "./dist/heroicons/*.js"
+    },
+    "./octarine": {
+      "types": "./dist/octarine.d.ts",
+      "import": "./dist/octarine.js"
+    },
+    "./octarine.json": "./dist/octarine.json",
+    "./virtual": {
+      "types": "./virtual.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "virtual.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsx scripts/build-sets.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@iconify-json/heroicons": "1.2.3",
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}

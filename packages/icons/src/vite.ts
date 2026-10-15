@@ -1,0 +1,198 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, dirname, extname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { Plugin } from 'vite'
+import type { CustomManifest, SetManifest } from './manifest.js'
+import { resolveSafelist, scanSource, type IconCatalog } from './scan.js'
+import { svgToIcon } from './svg.js'
+import type { IconDefinition, IconVariant } from './types.js'
+
+export interface OctarineIconsOptions {
+  /** Directories scanned for icon names, relative to the Vite root. Default: `['src']`. */
+  content?: string[]
+  /**
+   * Your own icons: a prefix and a directory of SVG files, e.g. `{ app: 'src/icons' }`
+   * makes `src/icons/invoice.svg` available as `app:invoice`.
+   */
+  custom?: Record<string, string>
+  /**
+   * Icons that are always bundled, for names that can't be found in the source
+   * (built at runtime, or a variant passed in from another file): `trash` (every
+   * variant), `trash/solid` or `app:invoice`.
+   */
+  safelist?: string[]
+  /**
+   * Declaration file that types `name` with every available icon and declares
+   * `virtual:octarine-icons`, relative to the Vite root. Default:
+   * `src/octarine-icons.d.ts`; `false` disables it.
+   */
+  dts?: string | false
+}
+
+export const virtualModuleId = 'virtual:octarine-icons'
+const resolvedVirtualId = `\0${virtualModuleId}`
+const distPrefix = '@octarine/icons/'
+
+const extensions = new Set(['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mdx', '.md', '.html'])
+const skipped = new Set(['node_modules', 'dist', 'storybook-static', 'coverage'])
+
+const here = dirname(fileURLToPath(import.meta.url))
+const readJson = <T>(file: string) => JSON.parse(readFileSync(file, 'utf8')) as T
+
+function* sourceFiles(dir: string): Generator<string> {
+  if (!existsSync(dir)) return
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || skipped.has(entry.name)) continue
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) yield* sourceFiles(path)
+    else if (isSource(path)) yield path
+  }
+}
+
+const isSource = (file: string) => extensions.has(extname(file)) && !file.endsWith('.d.ts')
+
+/**
+ * Bundles only the icons the source uses, the way Tailwind generates only the
+ * classes it finds. Apps install the result once:
+ *
+ *   import icons from 'virtual:octarine-icons'
+ *   app.use(createIcons(icons))
+ */
+export function octarineIcons(options: OctarineIconsOptions = {}): Plugin {
+  const set = readJson<SetManifest>(resolve(here, 'heroicons/manifest.json'))
+  const builtIn = readJson<CustomManifest>(resolve(here, 'octarine.json'))
+
+  let root = process.cwd()
+  let contentDirs: string[] = []
+  let customDirs: [prefix: string, dir: string][] = []
+  /** App icons (`app:invoice`), converted from SVG. */
+  const appIcons = new Map<string, IconDefinition>()
+  const fileKeys = new Map<string, Set<string>>()
+  let safelistKeys = new Set<string>()
+  let catalog: IconCatalog
+
+  const setCatalog: IconCatalog['set'] = new Map(
+    Object.entries(set.icons).map(([name, icon]) => [name, icon.variants]),
+  )
+
+  function loadCustom() {
+    appIcons.clear()
+    for (const [prefix, dir] of customDirs) {
+      for (const file of readdirSync(dir).filter((f) => f.endsWith('.svg'))) {
+        const name = `${prefix}:${basename(file, '.svg')}`
+        appIcons.set(name, svgToIcon(readFileSync(join(dir, file), 'utf8'), { name }))
+      }
+    }
+    catalog = {
+      set: setCatalog,
+      custom: new Set([...Object.keys(builtIn.icons), ...appIcons.keys()]),
+    }
+  }
+
+  const scanFile = (file: string) =>
+    fileKeys.set(file, scanSource(readFileSync(file, 'utf8'), catalog))
+
+  const usedKeys = () =>
+    [...new Set([...safelistKeys, ...[...fileKeys.values()].flatMap((keys) => [...keys])])].sort()
+
+  function moduleCode(): string {
+    const imports: string[] = []
+    const consts: string[] = []
+    const entries: string[] = []
+    usedKeys().forEach((key, i) => {
+      const local = `i${i}`
+      if (appIcons.has(key)) {
+        consts.push(`const ${local} = ${JSON.stringify(appIcons.get(key))}`)
+      } else if (key in builtIn.icons) {
+        imports.push(`import { ${builtIn.icons[key]} as ${local} } from '${distPrefix}octarine.js'`)
+      } else {
+        const [name, variant] = key.split('/') as [string, IconVariant]
+        const exportName = set.icons[name]!.export
+        imports.push(`import { ${exportName} as ${local} } from '${distPrefix}heroicons/${variant}.js'`)
+      }
+      entries.push(`  ${JSON.stringify(key)}: ${local},`)
+    })
+    return [...imports, ...consts, `export default {\n${entries.join('\n')}\n}`, ''].join('\n')
+  }
+
+  function writeDts() {
+    if (options.dts === false) return
+    const file = resolve(root, options.dts ?? 'src/octarine-icons.d.ts')
+    const names = [...setCatalog.keys(), ...catalog.custom].sort()
+    const content = [
+      '// Generated by @octarine/icons/vite. Do not edit; commit it so type checks see it.',
+      '/// <reference types="@octarine/icons/virtual" />',
+      'export {}',
+      '',
+      "declare module '@octarine/icons' {",
+      '  interface IconNameRegister {',
+      '    name:',
+      ...names.map((name) => `      | '${name}'`),
+      '  }',
+      '}',
+      '',
+    ].join('\n')
+    if (existsSync(file) && readFileSync(file, 'utf8') === content) return
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, content)
+  }
+
+  return {
+    name: 'octarine-icons',
+    enforce: 'pre',
+
+    configResolved(config) {
+      root = config.root
+      contentDirs = (options.content ?? ['src']).map((dir) => resolve(root, dir))
+      customDirs = Object.entries(options.custom ?? {}).map(([prefix, dir]) => {
+        if (prefix === builtIn.prefix) throw new Error(`[octarine-icons] "${prefix}:" is reserved`)
+        return [prefix, resolve(root, dir)]
+      })
+      loadCustom()
+
+      const safelist = resolveSafelist(options.safelist ?? [], catalog)
+      safelistKeys = safelist.keys
+      for (const entry of safelist.unknown) {
+        config.logger.warn(`[octarine-icons] safelist entry "${entry}" matches no icon`)
+      }
+      for (const dir of contentDirs) for (const file of sourceFiles(dir)) scanFile(file)
+      writeDts()
+    },
+
+    resolveId(id, importer) {
+      if (id === virtualModuleId) return resolvedVirtualId
+      if (importer === resolvedVirtualId && id.startsWith(distPrefix)) {
+        return resolve(here, id.slice(distPrefix.length))
+      }
+    },
+
+    load(id) {
+      if (id === resolvedVirtualId) return moduleCode()
+    },
+
+    configureServer(server) {
+      server.watcher.add([...contentDirs, ...customDirs.map(([, dir]) => dir)])
+
+      const refresh = (file: string, removed = false) => {
+        const before = usedKeys().join()
+        if (customDirs.some(([, dir]) => file.startsWith(dir)) && file.endsWith('.svg')) {
+          loadCustom()
+          writeDts()
+          for (const known of fileKeys.keys()) scanFile(known)
+        } else if (contentDirs.some((dir) => file.startsWith(dir)) && isSource(file)) {
+          if (removed) fileKeys.delete(file)
+          else scanFile(file)
+        } else return
+        if (usedKeys().join() === before) return
+
+        const mod = server.moduleGraph.getModuleById(resolvedVirtualId)
+        if (mod) server.moduleGraph.invalidateModule(mod)
+        server.ws.send({ type: 'full-reload' })
+      }
+
+      server.watcher.on('add', (file) => refresh(resolve(file)))
+      server.watcher.on('change', (file) => refresh(resolve(file)))
+      server.watcher.on('unlink', (file) => refresh(resolve(file), true))
+    },
+  }
+}
