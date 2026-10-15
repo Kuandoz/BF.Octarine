@@ -161,6 +161,14 @@ validations: {
 };
 ```
 
+**Hidden fields are not validated.** The user can't see or fix them, so a
+required field behind `hide: "wantsCall !== true"` doesn't block the form.
+`engine.isHidden(path)` tells whether every field that shows a path is hidden,
+by its own `hide`, a container's, or (in a repeat) its row's. An error that was
+already shown disappears as soon as its field is hidden. Paths no field renders
+are always validated, and `address.street` follows the `address` field it
+belongs to.
+
 A path needs no corresponding rendered field at all — a cross-field rule like
 `endDate` works fine with no UI field behind it. Inside a `repeat`, a
 concrete array index becomes a `*` wildcard instead, e.g.

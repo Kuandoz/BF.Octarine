@@ -22,6 +22,7 @@ import type {
 } from './types'
 import { ValidationService } from './ValidationService'
 import type { ValidatorRegistry } from './validators'
+import { collectHideConditions, findHideConditions, type HideCondition } from './visibility'
 
 type FormEngineEvents = {
   modelChanged: { path: string }
@@ -34,6 +35,8 @@ interface PathContext {
   wildcardPath: string
   // The innermost repeat row `path` sits in, if any.
   repeatContext?: RepeatContext
+  // Every repeat row `path` sits in, outermost first.
+  repeatContexts: RepeatContext[]
 }
 
 export class FormEngine {
@@ -49,6 +52,7 @@ export class FormEngine {
   private _listService: ListService
   private _defaults: Record<string, unknown>
   private _constants: Record<string, unknown>
+  private _hideConditions: Map<string, HideCondition[][]>
 
   constructor(
     definition: FormDefinition,
@@ -82,6 +86,7 @@ export class FormEngine {
       translationProvider,
     )
     this._listService = new ListService(definition.lists, listProvider)
+    this._hideConditions = collectHideConditions(definition.components)
   }
 
   get model(): Record<string, unknown> {
@@ -171,20 +176,16 @@ export class FormEngine {
   }
 
   // `definition.validations` is the only source of rules — resolution is
-  // driven entirely by that dictionary plus the live model's actual shape,
-  // never by walking `definition.components`. Validation is a model concern;
-  // it doesn't need to know which (if any) component rendered a path.
+  // driven entirely by that dictionary plus the live model's actual shape.
+  // Validation is a model concern, except that a path whose fields are all
+  // hidden is skipped (see isHidden).
   validatePath(path: string): ValidationResult {
     const { wildcardPath, repeatContext } = this.resolvePathContext(path)
     const rules = this.definition.validations?.[wildcardPath]
     const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-    const result = this._validationService.validate(
-      rules,
-      this.getValue(path),
-      path,
-      scope,
-      this._model,
-    )
+    const result = this.isHidden(path)
+      ? { valid: true }
+      : this._validationService.validate(rules, this.getValue(path), path, scope, this._model)
     this._validationResults[path] = result
     return result
   }
@@ -194,13 +195,9 @@ export class FormEngine {
     for (const [wildcardKey, rules] of Object.entries(this.definition.validations ?? {})) {
       for (const { path, repeatContext } of this.expandWildcardPaths(wildcardKey)) {
         const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-        const result = this._validationService.validate(
-          rules,
-          this.getValue(path),
-          path,
-          scope,
-          this._model,
-        )
+        const result = this.isHidden(path)
+          ? { valid: true }
+          : this._validationService.validate(rules, this.getValue(path), path, scope, this._model)
         this._validationResults[path] = result
         if (!result.valid) valid = false
       }
@@ -208,8 +205,30 @@ export class FormEngine {
     return valid
   }
 
+  // A field that became hidden after it was validated no longer shows its
+  // error: the user can't see or fix it.
   getValidationResult(path: string): ValidationResult | undefined {
-    return this._validationResults[path]
+    const result = this._validationResults[path]
+    return result && !result.valid && this.isHidden(path) ? { valid: true } : result
+  }
+
+  // Whether no field shows `path` right now: its own `hide`, a container's,
+  // or a repeat row's is true. A hidden path isn't validated, since the user
+  // can't fix it. A path no field renders (a cross-field rule) is never
+  // hidden; `address.street` follows the `address` field it belongs to.
+  isHidden(path: string): boolean {
+    const { wildcardPath, repeatContexts } = this.resolvePathContext(path)
+    const fields = findHideConditions(this._hideConditions, wildcardPath)
+    if (!fields) return false
+    return fields.every((conditions) =>
+      conditions.some(({ condition, depth }) =>
+        this.resolveCondition(
+          condition,
+          false,
+          depth === 0 ? undefined : repeatContexts[depth - 1],
+        ),
+      ),
+    )
   }
 
   hasValidationRule(path: string, type: string): boolean {
@@ -255,15 +274,19 @@ export class FormEngine {
   // of the rendering schema.
   private resolvePathContext(path: string): PathContext {
     const segments = path.split('.')
-    let repeatContext: RepeatContext | undefined
+    const repeatContexts: RepeatContext[] = []
     let prefix = ''
     const wildcardSegments = segments.map((segment) => {
       const isArrayIndex = /^\d+$/.test(segment) && Array.isArray(this.getValue(prefix))
-      if (isArrayIndex) repeatContext = { arrayPath: prefix, arrayIndex: Number(segment) }
+      if (isArrayIndex) repeatContexts.push({ arrayPath: prefix, arrayIndex: Number(segment) })
       prefix = prefix ? `${prefix}.${segment}` : segment
       return isArrayIndex ? '*' : segment
     })
-    return { wildcardPath: wildcardSegments.join('.'), repeatContext }
+    return {
+      wildcardPath: wildcardSegments.join('.'),
+      repeatContext: repeatContexts.at(-1),
+      repeatContexts,
+    }
   }
 
   // The inverse of resolvePathContext: given a validations-dictionary key
