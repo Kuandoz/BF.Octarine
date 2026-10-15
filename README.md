@@ -22,6 +22,8 @@ Each layer depends only on the layers to its left. `@octarine/icons` depends on 
 
 ## Getting started
 
+New here? [QUICKSTART.md](QUICKSTART.md) walks you from install to a first screen in your own app.
+
 Requires Node 22+ and [pnpm](https://pnpm.io) (`npm i -g pnpm`, or prefix commands with `npx pnpm`).
 
 ```sh
