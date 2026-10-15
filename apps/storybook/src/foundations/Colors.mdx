@@ -1,11 +1,11 @@
 import { ColorItem, ColorPalette, Meta } from '@storybook/addon-docs/blocks'
-import { colors, cssVar, flattenSemantic, intents, semanticColors } from '@octarine/tokens'
+import { cssVar, defaultTheme, flattenSemantic, intents, paletteNames } from '@octarine/tokens'
 
 <Meta title="Foundations/Colors" />
 
-export const palettes = Object.entries(colors).filter(([, value]) => typeof value === 'object')
+export const palettes = paletteNames.map((name) => [name, defaultTheme.palette[name]])
 
-export const semantic = flattenSemantic(semanticColors.light).map(([name]) => name)
+export const semantic = flattenSemantic(defaultTheme.light.colors).map(([name]) => name)
 
 export const swatches = (names) =>
   Object.fromEntries(names.map((name) => [name, `var(${cssVar(`color-${name}`)})`]))
@@ -16,7 +16,9 @@ Octarine colors come in two layers, both defined in `@octarine/tokens`:
 
 - **Primitives** — raw OKLCH scales (`brand-500`, `neutral-200`, …). They carry no meaning.
 - **Semantic** — named by purpose (`surface`, `fg-muted`, `danger`, …) and pointing at a primitive.
-  They swap between light and dark: use the **Theme** toolbar button to compare.
+  They swap between light and dark: use the **Mode** toolbar button to compare.
+
+Each theme brings its own palettes and mappings; switch **Theme** in the toolbar to see them.
 
 Components only use semantic colors, so `bg-primary` or `text-fg-muted` adapt to the theme
 automatically. Reach for a primitive (`bg-brand-100`) only for one-off illustrations.

@@ -1,15 +1,17 @@
 import { Meta, Typeset } from '@storybook/addon-docs/blocks'
-import { fontFamily, fontSize, textStyles } from '@octarine/tokens'
+import { fontSize, textStyleNames } from '@octarine/tokens'
 
 <Meta title="Foundations/Typography" />
 
 # Typography
 
+Fonts and text styles belong to the theme: switch **Theme** in the toolbar to compare.
+
 ## Text styles
 
-Text styles bundle size, line height, weight and letter spacing into one utility —
-`text-heading-1`, `text-body`, `text-caption`, … — and are what `OHeading` and `OText` use.
-Prefer them over combining `text-*`, `leading-*` and `font-*` by hand.
+Text styles bundle family, size, line height, weight, letter spacing and case into one
+utility — `text-heading-1`, `text-body`, `text-caption`, … — and are what `OHeading` and
+`OText` use. Prefer them over combining `text-*`, `leading-*` and `font-*` by hand.
 
 <div
   style={{
@@ -24,7 +26,7 @@ Prefer them over combining `text-*`, `leading-*` and `font-*` by hand.
     border: '1px solid var(--oct-color-border)',
   }}
 >
-  {Object.entries(textStyles).map(([name, s]) => [
+  {textStyleNames.map((name) => [
     <code key={`${name}-name`} style={{ fontSize: '0.75rem', color: 'var(--oct-color-fg-muted)' }}>
       text-{name}
     </code>,
@@ -36,46 +38,40 @@ Prefer them over combining `text-*`, `leading-*` and `font-*` by hand.
         fontWeight: `var(--oct-text-${name}-weight)`,
         lineHeight: `var(--oct-text-${name}-leading)`,
         letterSpacing: `var(--oct-text-${name}-tracking)`,
-        textTransform: name === 'overline' ? 'uppercase' : undefined,
+        textTransform: `var(--oct-text-${name}-transform)`,
       }}
     >
       The quick brown fox jumps over the lazy dog
-      <span
-        style={{
-          marginLeft: '0.75rem',
-          fontSize: '0.75rem',
-          fontFamily: 'var(--oct-font-mono)',
-          fontWeight: 400,
-          letterSpacing: 0,
-          textTransform: 'none',
-          color: 'var(--oct-color-fg-subtle)',
-        }}
-      >
-        {s.size} / {s.weight} / {s.lineHeight}
-      </span>
     </span>,
   ])}
 </div>
 
 ## Font families
 
-<div>
-  {Object.entries(fontFamily).map(([name, family]) => (
-    <Typeset
-      key={name}
-      fontFamily={family}
-      fontSizes={[fontSize['2xl']]}
-      sampleText={`font-${name} — Octarine 0123456789`}
-    />
+<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+  {['sans', 'display', 'mono'].map((name) => (
+    <div key={name} style={{ fontFamily: `var(--oct-font-${name})`, fontSize: '1.5rem' }}>
+      <code
+        style={{
+          fontFamily: 'var(--oct-font-mono)',
+          fontSize: '0.75rem',
+          color: 'var(--oct-color-fg-muted)',
+          marginRight: '1rem',
+        }}
+      >
+        font-{name}
+      </code>
+      Octarine 0123456789
+    </div>
   ))}
 </div>
 
 ## Size scale
 
-The raw scale behind the text styles (`text-xs` … `text-6xl`).
+The raw scale behind the plain `text-xs` … `text-6xl` utilities, shared by every theme.
 
 <Typeset
   fontSizes={Object.values(fontSize)}
-  fontFamily={fontFamily.sans}
+  fontFamily="var(--oct-font-sans)"
   sampleText="The quick brown fox"
 />

@@ -1,5 +1,5 @@
 import { Meta } from '@storybook/addon-docs/blocks'
-import { radius, shadow, spacing } from '@octarine/tokens'
+import { radiusNames, shadowNames, spacing } from '@octarine/tokens'
 
 <Meta title="Foundations/Spacing & Shape" />
 
@@ -36,8 +36,10 @@ Every spacing utility is a multiple of one base unit (`--spacing: {spacing}`), s
 
 ## Radius
 
+Radii and shadows come from the theme; switch **Theme** in the toolbar to compare.
+
 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
-  {Object.keys(radius).map((name) => (
+  {radiusNames.map((name) => (
     <div key={name} style={{ textAlign: 'center' }}>
       <div
         style={{
@@ -65,7 +67,7 @@ Every spacing utility is a multiple of one base unit (`--spacing: {spacing}`), s
     borderRadius: '0.75rem',
   }}
 >
-  {Object.keys(shadow).map((name) => (
+  {shadowNames.map((name) => (
     <div key={name} style={{ textAlign: 'center' }}>
       <div
         style={{
