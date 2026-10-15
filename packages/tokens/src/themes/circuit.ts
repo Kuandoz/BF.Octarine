@@ -329,6 +329,7 @@ export const circuit: Theme = {
     controlHeight: { sm: '1.75rem', md: '2rem', lg: '2.5rem' },
     controlPaddingX: { sm: '0.625rem', md: '0.75rem', lg: '1rem' },
     inputPaddingX: '0.5rem',
+    fieldGap: '0.375rem',
     cardPadding: '1rem',
     borderWidth: '1px',
     buttonTransform: 'none',

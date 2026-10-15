@@ -53,6 +53,7 @@ function themeDecls(theme: Theme): string[] {
     ...Object.entries(c.controlHeight).map(([k, v]) => decl(`control-height-${k}`, v)),
     ...Object.entries(c.controlPaddingX).map(([k, v]) => decl(`control-px-${k}`, v)),
     decl('input-px', c.inputPaddingX),
+    decl('field-gap', c.fieldGap),
     decl('card-padding', c.cardPadding),
     decl('border-width', c.borderWidth),
     ...Object.entries(c.radius).map(([k, v]) => decl(`radius-${k}`, ref(`radius-${v}`))),

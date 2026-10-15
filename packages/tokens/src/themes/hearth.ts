@@ -329,6 +329,7 @@ export const hearth: Theme = {
     controlHeight: { sm: '2.25rem', md: '2.75rem', lg: '3.25rem' },
     controlPaddingX: { sm: '0.875rem', md: '1.25rem', lg: '1.625rem' },
     inputPaddingX: '1rem',
+    fieldGap: '0.5rem',
     cardPadding: '1.5rem',
     borderWidth: '1.5px',
     buttonTransform: 'none',

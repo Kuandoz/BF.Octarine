@@ -24,6 +24,8 @@ export type ComponentTokens = {
   controlHeight: Record<ControlSize, string>
   controlPaddingX: Record<ControlSize, string>
   inputPaddingX: string
+  /** Gap between a field's label, hint, control and messages. */
+  fieldGap: string
   /** Padding of a `padding="md"` card. */
   cardPadding: string
   borderWidth: string

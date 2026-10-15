@@ -329,6 +329,7 @@ export const vellum: Theme = {
     controlHeight: { sm: '2rem', md: '2.5rem', lg: '3rem' },
     controlPaddingX: { sm: '0.75rem', md: '1rem', lg: '1.375rem' },
     inputPaddingX: '0.75rem',
+    fieldGap: '0.625rem',
     cardPadding: '1.75rem',
     borderWidth: '1px',
     buttonTransform: 'none',

@@ -323,6 +323,7 @@ export const prism: Theme = {
     controlHeight: { sm: '2rem', md: '2.5rem', lg: '3.25rem' },
     controlPaddingX: { sm: '0.75rem', md: '1.125rem', lg: '1.5rem' },
     inputPaddingX: '0.875rem',
+    fieldGap: '0.5rem',
     cardPadding: '1.5rem',
     borderWidth: '2px',
     buttonTransform: 'uppercase',

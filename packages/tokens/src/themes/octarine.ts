@@ -266,6 +266,7 @@ export const octarine: Theme = {
     controlHeight: { sm: '2rem', md: '2.5rem', lg: '3rem' },
     controlPaddingX: { sm: '0.75rem', md: '1rem', lg: '1.5rem' },
     inputPaddingX: '0.75rem',
+    fieldGap: '0.5rem',
     cardPadding: '1.5rem',
     borderWidth: '1px',
     radius: { control: 'md', input: 'md', card: 'xl', badge: 'full' },
