@@ -6,11 +6,12 @@ full overview.
 ## Layout
 
 ```
-packages/tokens    → design tokens (TS source of truth → tokens.css / tokens.json)
+packages/tokens    → design tokens + themes (TS source of truth → tokens.css, themes/*.css, tokens.json)
 packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
 packages/vue       → Vue components (one folder per component: .vue, .stories.ts, .spec.ts, index.ts)
 apps/storybook     → Storybook 10 (component stories + Foundations MDX pages)
 apps/playground    → demo app consuming the *built* packages
+assets/brand       → Octarine logos (SVG)
 ```
 
 Each layer may only depend on the layers above it in this list. `tokens` contains no Tailwind or
@@ -24,7 +25,7 @@ pnpm may not be on PATH; prefix with `npx pnpm` if `pnpm` is not found.
 pnpm install
 pnpm build            # all packages (tokens → tailwind → vue)
 pnpm build:foundation # tokens + tailwind only (needed after token changes)
-pnpm test             # Vitest component specs
+pnpm test             # contrast spec (every theme × mode) + Vitest component specs
 pnpm typecheck
 pnpm storybook        # dev server on :6006
 pnpm format           # Prettier
@@ -36,8 +37,16 @@ Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` mus
 
 - **Colors:** components use semantic colors (`bg-surface`, `text-fg-muted`, `bg-danger-subtle`), never
   primitives (`bg-red-600`). Dark mode is token-driven, so don't use `dark:` classes in components.
+- **Themes:** themes are pluggable (`packages/tokens/src/themes/`, activated with `data-theme`;
+  light/dark is `data-mode`). Every theme fills exactly the same tokens, so components must not
+  hard-code what a theme decides: control heights, padding, radius, border width, shadows and
+  text case come from component tokens (`min-h-(--oct-control-height-md)`, `px-(--oct-control-px-md)`,
+  `rounded-control`, `rounded-card`, `theme-border`, `shadow-card`, `--oct-button-transform`, …).
+  To add a theme, add a `Theme` file and register it in `themes/index.ts`; the build and the
+  contrast spec pick it up.
 - **Typography:** use text-style utilities (`text-heading-2`, `text-body`, `text-caption`) instead of
-  combining size, leading and weight by hand.
+  combining size, leading and weight by hand. They also set the family and case per theme, so
+  don't add `font-display`, `font-mono` or `uppercase` next to them.
 - **Variants:** define them with `cva` and write every class name out in full, because Tailwind
   scans the source. Never build class names with string interpolation.
 - **Class merging:** root elements use `useClasses()` with `defineOptions({ inheritAttrs: false })`
@@ -45,8 +54,8 @@ Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` mus
 - **New components:** prefix with `O`, place under the correct category
   (`foundations`, `actions`, `forms`, `feedback`, `layout`), and export from
   `packages/vue/src/components/index.ts`. Every component needs a story and a spec.
-- **Token changes:** edit `packages/tokens/src`, and map any new Tailwind namespace in
-  `packages/tailwind/scripts/build-theme.ts`.
+- **Token changes:** edit `packages/tokens/src` (global primitives, or a theme in `themes/`), and
+  map any new Tailwind namespace in `packages/tailwind/scripts/build-theme.ts`.
 - **Commits:** use Conventional Commits (`feat(vue): …`, `fix(tokens): …`, `docs: …`), scoped to
   the package.
 
@@ -62,7 +71,7 @@ pass. If a request would conflict with this rule, say so rather than silently co
   needs at least **3:1** (1.4.3).
 - UI component boundaries, focus indicators, icons and meaningful graphics need at least **3:1**
   against adjacent colors (1.4.11). This includes input borders and outline-button/badge borders.
-- Every semantic pairing is checked in **both light and dark** themes by
+- Every semantic pairing is checked in **every theme, light and dark**, by
   `packages/tokens/src/contrast.spec.ts`. When a component starts using a new color combination, add
   that pair to the spec.
 - `border` is for decorative dividers only. Anything that identifies a control (input, outline
@@ -101,8 +110,8 @@ pass. If a request would conflict with this rule, say so rather than silently co
 
 ### Verification
 
-- The Storybook a11y addon (axe) must report **no violations** for any story, in light and dark
-  themes.
+- The Storybook a11y addon (axe) must report **no violations** for any story, in every theme, light
+  and dark.
 - Specs assert the accessibility contract: roles, accessible names, `aria-*` wiring and keyboard
   behavior, not just classes.
 - Automated checks catch only part of WCAG. For new interactive components, also check
