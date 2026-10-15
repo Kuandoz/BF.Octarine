@@ -3,15 +3,19 @@
   "version": "0.1.0",
   "description": "Headless engine that renders forms from a JSON definition: model, validation, conditions, localisation and lists.",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./layout.css": "./layout.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "layout.css"
   ],
   "scripts": {
     "build": "vite build && vue-tsc -p tsconfig.build.json",

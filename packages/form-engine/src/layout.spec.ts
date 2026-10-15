@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { widthBasis } from './layout'
+import { fieldWidth } from './layout'
 
-describe('widthBasis', () => {
-  it('returns a flex-basis calc string that leaves room for the row gap', () => {
-    expect(widthBasis(undefined)).toBe('100%')
-    expect(widthBasis('half')).toBe('calc(50% - 0.5rem)')
-    expect(widthBasis('third')).toBe('calc(33.3333% - 0.6667rem)')
+describe('fieldWidth', () => {
+  it('reads layout.width', () => {
+    expect(fieldWidth({ type: 'text', layout: { width: 'half' } })).toBe('half')
+    expect(fieldWidth({ type: 'text', layout: { width: 'third' } })).toBe('third')
+  })
+
+  it('is full width without a layout or with an unknown width', () => {
+    expect(fieldWidth({ type: 'text' })).toBe('full')
+    expect(fieldWidth({ type: 'text', layout: { width: 'quarter' } })).toBe('full')
   })
 })

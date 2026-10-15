@@ -146,6 +146,23 @@ registerComponent('date', DateField)
 Then any form JSON with `{ type: "date", path: "birthDate" }` renders it, with
 no changes to `FormRenderer` or `FormComponent`.
 
+## Layout
+
+Fields sit in a six-column grid. A field asks for a share of a row with
+`layout: { width: "half" }` or `"third"`; anything else is full width.
+
+```ts
+import '@octarine/form-engine/layout.css'
+```
+
+The engine only marks the markup (`data-form-grid`, `data-form-item`,
+`data-width`); `layout.css` places the cells. Half and third widths apply only
+when the form itself is wide enough (30rem for halves, 40rem for thirds, measured
+with a container query); below that every field takes the full width, so a
+form reflows on a phone or when zoomed in, without scrolling sideways (WCAG
+1.4.10). The gaps come from `--oct-form-row-gap` and `--oct-form-column-gap`,
+with fallbacks of 1.5rem and 1rem.
+
 ## Validation
 
 **Validation lives on the form, not on the field.** A `FieldDefinition` only

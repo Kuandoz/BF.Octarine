@@ -79,3 +79,24 @@ describe('FormComponent inline', () => {
     expect([...children].map((child) => child.className)).toEqual(['stub-field', 'stub-field'])
   })
 })
+
+describe('FormComponent grid', () => {
+  it('marks each field with the width it asks for', () => {
+    const engine = new FormEngine({ components: [] })
+    const wrapper = mountWithEngine(engine, [
+      { type: 'stub', path: 'a' },
+      { type: 'stub', path: 'b', layout: { width: 'half' } },
+      { type: 'stub', path: 'c', layout: { width: 'third' } },
+    ])
+    expect(wrapper.attributes('data-form-grid')).toBeDefined()
+    const items = wrapper.findAll('[data-form-item]')
+    expect(items.map((item) => item.attributes('data-width'))).toEqual(['full', 'half', 'third'])
+  })
+
+  it('uses no styling classes of its own', () => {
+    const engine = new FormEngine({ components: [] })
+    const wrapper = mountWithEngine(engine, [{ type: 'stub', path: 'a' }])
+    expect(wrapper.attributes('class')).toBeUndefined()
+    expect(wrapper.get('[data-form-item]').attributes('class')).toBeUndefined()
+  })
+})
