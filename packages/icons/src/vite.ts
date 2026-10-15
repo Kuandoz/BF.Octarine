@@ -108,7 +108,9 @@ export function octarineIcons(options: OctarineIconsOptions = {}): Plugin {
       } else {
         const [name, variant] = key.split('/') as [string, IconVariant]
         const exportName = set.icons[name]!.export
-        imports.push(`import { ${exportName} as ${local} } from '${distPrefix}heroicons/${variant}.js'`)
+        imports.push(
+          `import { ${exportName} as ${local} } from '${distPrefix}heroicons/${variant}.js'`,
+        )
       }
       entries.push(`  ${JSON.stringify(key)}: ${local},`)
     })

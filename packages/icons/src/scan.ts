@@ -1,4 +1,10 @@
-import { defaultIconVariant, iconKey, iconVariants, isCustomIcon, type IconVariant } from './types.js'
+import {
+  defaultIconVariant,
+  iconKey,
+  iconVariants,
+  isCustomIcon,
+  type IconVariant,
+} from './types.js'
 
 /** What can be found: set icons with the variants they exist in, and custom icons. */
 export interface IconCatalog {

@@ -58,7 +58,7 @@ describe('octarineIcons', () => {
 
   it('writes a declaration file with every available name', () => {
     const dts = readFileSync(join(root, 'src/octarine-icons.d.ts'), 'utf8')
-    expect(dts).toContain("interface IconNameRegister")
+    expect(dts).toContain('interface IconNameRegister')
     expect(dts).toContain("| 'academic-cap'")
     expect(dts).toContain("| 'app:invoice'")
     expect(dts).toContain("| 'octarine:mark'")

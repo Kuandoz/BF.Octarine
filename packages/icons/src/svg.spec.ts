@@ -18,10 +18,23 @@ describe('svgToIcon', () => {
       { name: 'test' },
     )
     const markup = JSON.stringify(icon)
-    for (const forbidden of ['alert', 'script', 'style', 'Secret', 'html', 'example.com', 'onclick', 'class', 'image']) {
+    for (const forbidden of [
+      'alert',
+      'script',
+      'style',
+      'Secret',
+      'html',
+      'example.com',
+      'onclick',
+      'class',
+      'image',
+    ]) {
       expect(markup).not.toContain(forbidden)
     }
-    expect(icon.nodes).toEqual([['use', {}], ['path', { d: 'M0 0h24v24H0z' }]])
+    expect(icon.nodes).toEqual([
+      ['use', {}],
+      ['path', { d: 'M0 0h24v24H0z' }],
+    ])
   })
 
   it('turns a single color into currentColor', () => {

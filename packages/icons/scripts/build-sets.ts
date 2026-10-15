@@ -20,7 +20,16 @@ const root = resolve(import.meta.dirname, '..')
 const dist = resolve(root, 'dist')
 const require = createRequire(import.meta.url)
 
-const reserved = new Set(['delete', 'default', 'export', 'import', 'in', 'new', 'function', 'class'])
+const reserved = new Set([
+  'delete',
+  'default',
+  'export',
+  'import',
+  'in',
+  'new',
+  'function',
+  'class',
+])
 
 /** `arrow-left` → `arrowLeft`, made a valid identifier. */
 function exportName(name: string): string {
