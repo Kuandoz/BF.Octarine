@@ -1,9 +1,9 @@
-import { colors } from './primitives/colors.js'
+import { baseColors, type Palette } from './primitives/colors.js'
 import type { ColorRef } from './semantic/colors.js'
 
-/** Resolves a semantic color reference to its primitive OKLCH value. */
-export function resolveColor(ref: ColorRef): string {
-  return ref.scale === undefined ? colors[ref.palette] : colors[ref.palette][ref.scale]
+/** Resolves a semantic color reference to its primitive OKLCH value in a theme's palette. */
+export function resolveColor(ref: ColorRef, palette: Palette): string {
+  return ref.scale === undefined ? baseColors[ref.palette] : palette[ref.palette][ref.scale]
 }
 
 /** WCAG relative luminance of an `oklch(L% C H)` color, via OKLab → linear sRGB. */

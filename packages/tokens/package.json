@@ -10,7 +10,8 @@
       "import": "./dist/index.js"
     },
     "./tokens.css": "./dist/tokens.css",
-    "./tokens.json": "./dist/tokens.json"
+    "./tokens.json": "./dist/tokens.json",
+    "./themes/*": "./dist/themes/*"
   },
   "files": [
     "dist"

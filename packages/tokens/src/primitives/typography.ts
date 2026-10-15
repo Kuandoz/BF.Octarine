@@ -1,8 +1,7 @@
-export const fontFamily = {
-  sans: "'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif",
-  display: "'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif",
-  mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-} as const
+/**
+ * Raw type scale, shared by every theme. Themes define their own fonts and text
+ * styles (`../themes`); these back the plain `text-sm`, `font-bold`, … utilities.
+ */
 
 /** Modular type scale (~1.2 ratio), in rem. */
 export const fontSize = {
@@ -23,6 +22,7 @@ export const fontWeight = {
   medium: '500',
   semibold: '600',
   bold: '700',
+  extrabold: '800',
 } as const
 
 export const lineHeight = {
