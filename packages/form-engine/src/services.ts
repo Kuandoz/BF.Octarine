@@ -27,6 +27,7 @@ export const LIST_PROVIDER_KEY: InjectionKey<ListProvider> = Symbol('octarine-fo
 // `FormEngine` constructor. A host app replaces this by providing its own
 // `TranslationProvider` (e.g. bridging to vue-i18n) — see the README.
 const DEFAULT_MESSAGES: Record<string, string> = {
+  'formRenderer.validation.invalid': "This value isn't valid.",
   'formRenderer.validation.required': 'This field is required.',
   'formRenderer.validation.minLength': 'Must be at least {min} characters.',
   'formRenderer.validation.maxLength': 'Must be at most {max} characters.',

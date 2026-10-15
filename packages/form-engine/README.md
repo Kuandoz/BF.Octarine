@@ -161,6 +161,14 @@ validations: {
 };
 ```
 
+**When errors are shown.** A value is validated as it changes, but its error
+only appears once the user has left the field or tried to submit, so nobody is
+told "invalid email" after one letter. Fields call `engine.touch(path)` on blur
+and show `engine.getError(path)`; a submit button calls `engine.submit()`, which
+validates every visible field, shows all errors and returns whether the form can
+be sent. A shown error follows the value and disappears once it is fixed.
+`getValidationResult(path)` still returns the raw result at any time.
+
 **Hidden fields are not validated.** The user can't see or fix them, so a
 required field behind `hide: "wantsCall !== true"` doesn't block the form.
 `engine.isHidden(path)` tells whether every field that shows a path is hidden,

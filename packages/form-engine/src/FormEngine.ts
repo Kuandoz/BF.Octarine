@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 import mitt from 'mitt'
 
@@ -45,6 +45,9 @@ export class FormEngine {
   private _model: Record<string, unknown>
   private _validationResults: Record<string, ValidationResult> = reactive({})
   private _dirtyPaths = reactive(new Set<string>())
+  private _touchedPaths = reactive(new Set<string>())
+  private _submitted = ref(false)
+  private _translate: TranslationProvider['t']
   private _emitter = mitt<FormEngineEvents>()
   private _expressionService: ExpressionService
   private _validationService: ValidationService
@@ -64,6 +67,7 @@ export class FormEngine {
   ) {
     this.definition = definition
     this._defaults = definition.defaults ?? {}
+    this._translate = translationProvider.t
     this._constants = definition.constants ?? {}
 
     const isEmptyModel = Object.keys(initialModel).length === 0
@@ -112,6 +116,39 @@ export class FormEngine {
 
     this._dirtyPaths.add(path)
     this._emitter.emit('modelChanged', { path })
+  }
+
+  // The user has left the field at `path`: validate it, and from now on
+  // show its error (see getError). Fields call this on blur.
+  touch(path: string): void {
+    this._touchedPaths.add(path)
+    this.validatePath(path)
+  }
+
+  isTouched(path: string): boolean {
+    return this._touchedPaths.has(path)
+  }
+
+  // Validates every visible field and shows all their errors. Returns whether
+  // the form can be sent.
+  submit(): boolean {
+    this._submitted.value = true
+    return this.validateModel()
+  }
+
+  get submitted(): boolean {
+    return this._submitted.value
+  }
+
+  // The error to show for `path`, if any. A value is validated as it
+  // changes, but its error only appears once the field was left or a submit
+  // was attempted, so nobody is told "invalid email" after typing one letter.
+  // Once shown, it follows the value and disappears as soon as it is fixed.
+  getError(path: string): string | undefined {
+    if (!this._submitted.value && !this._touchedPaths.has(path)) return undefined
+    const result = this.getValidationResult(path)
+    if (!result || result.valid) return undefined
+    return result.message || this._translate('formRenderer.validation.invalid')
   }
 
   isDirty(path: string): boolean {
