@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@octarine/tailwind": "workspace:*",
+    "@octarine/tokens": "workspace:*",
     "@octarine/vue": "workspace:*",
     "vue": "^3.5.43"
   },

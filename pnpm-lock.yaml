@@ -178,6 +178,9 @@ importers:
       '@octarine/tailwind':
         specifier: workspace:*
         version: link:../../packages/tailwind
+      '@octarine/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
       '@octarine/vue':
         specifier: workspace:*
         version: link:../../packages/vue

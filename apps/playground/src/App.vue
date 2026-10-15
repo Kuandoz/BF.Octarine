@@ -8,11 +8,13 @@ import {
   OInput,
   OStack,
   OText,
+  useColorMode,
   useTheme,
 } from '@octarine/vue'
 import { computed, ref } from 'vue'
 
-const { resolved, toggle } = useTheme()
+const { theme, themes } = useTheme()
+const { resolved, toggle } = useColorMode()
 
 const email = ref('')
 const submitted = ref(false)
@@ -32,19 +34,35 @@ async function submit() {
 
 <template>
   <main class="mx-auto flex max-w-3xl flex-col gap-10 px-4 py-12">
-    <OStack direction="horizontal" justify="between" align="center">
-      <OStack :gap="1">
-        <OText variant="overline" tone="primary">Octarine</OText>
+    <OStack direction="horizontal" justify="between" align="center" wrap>
+      <OStack :gap="2">
+        <img
+          :src="resolved === 'dark' ? '/octarine-logo-dark.svg' : '/octarine-logo-light.svg'"
+          alt="Octarine by Bytes Fantastic"
+          class="h-12 w-auto self-start"
+        />
         <OHeading :level="1">Playground</OHeading>
       </OStack>
-      <OButton variant="outline" intent="neutral" @click="toggle">
-        {{ resolved === 'dark' ? 'Light' : 'Dark' }} mode
-      </OButton>
+      <OStack direction="horizontal" :gap="2" align="end" wrap>
+        <OField id="theme-select" label="Theme">
+          <select
+            id="theme-select"
+            v-model="theme"
+            class="theme-border min-h-(--oct-control-height-md) rounded-input border-border-strong bg-surface px-(--oct-input-px) text-body text-fg"
+          >
+            <option v-for="t in themes" :key="t.name" :value="t.name">{{ t.label }}</option>
+          </select>
+        </OField>
+        <OButton variant="outline" intent="neutral" @click="toggle">
+          {{ resolved === 'dark' ? 'Light' : 'Dark' }} mode
+        </OButton>
+      </OStack>
     </OStack>
 
     <OText variant="body-lg" tone="muted">
-      This app consumes the built <code>@octarine/vue</code> and <code>@octarine/tailwind</code>
-      packages exactly like an external project would.
+      This app consumes the built <code>@octarine/vue</code> and
+      <code>@octarine/tailwind</code> packages exactly like an external project would.
+      {{ themes[theme].description }}
     </OText>
 
     <OStack direction="horizontal" :gap="2" wrap>
