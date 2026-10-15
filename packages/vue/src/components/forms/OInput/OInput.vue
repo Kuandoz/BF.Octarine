@@ -5,17 +5,18 @@ import { cva, type VariantProps } from '../../../utils/variants'
 
 const input = cva(
   [
-    'transition-standard w-full rounded-md border bg-surface text-fg shadow-xs',
+    'transition-standard theme-border w-full rounded-input bg-surface px-(--oct-input-px) text-fg',
     'placeholder:text-fg-subtle',
     'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
-    'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60',
+    // Dashed as well as dimmed, so "disabled" doesn't rely on color alone.
+    'disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-fg-muted',
   ],
   {
     variants: {
       size: {
-        sm: 'h-8 px-2.5 text-body-sm',
-        md: 'h-10 px-3 text-body',
-        lg: 'h-12 px-4 text-body-lg',
+        sm: 'min-h-(--oct-control-height-sm) text-body-sm',
+        md: 'min-h-(--oct-control-height-md) text-body',
+        lg: 'min-h-(--oct-control-height-lg) text-body-lg',
       },
       invalid: {
         true: 'border-danger focus-visible:outline-danger',

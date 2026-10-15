@@ -18,7 +18,7 @@ describe('OButton', () => {
   it('lets consumer classes override conflicting defaults', () => {
     const wrapper = mount(OButton, { attrs: { class: 'rounded-full' } })
     expect(wrapper.classes()).toContain('rounded-full')
-    expect(wrapper.classes()).not.toContain('rounded-md')
+    expect(wrapper.classes()).not.toContain('rounded-control')
   })
 
   it('is disabled and busy while loading', () => {

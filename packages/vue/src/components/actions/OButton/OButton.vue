@@ -6,15 +6,16 @@ import { cva, type VariantProps } from '../../../utils/variants'
 const button = cva(
   [
     'focus-ring transition-standard inline-flex items-center justify-center gap-2',
-    'rounded-md font-medium whitespace-nowrap select-none',
-    'disabled:pointer-events-none disabled:opacity-50',
+    'theme-border rounded-control border-transparent text-label whitespace-nowrap select-none',
+    '[text-transform:var(--oct-button-transform)]',
+    'disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none',
   ],
   {
     variants: {
       variant: {
-        solid: '',
+        solid: 'border-(--oct-button-solid-border) shadow-control',
         soft: '',
-        outline: 'border bg-transparent',
+        outline: 'bg-transparent',
         ghost: 'bg-transparent',
       },
       intent: {
@@ -23,9 +24,9 @@ const button = cva(
         danger: '',
       },
       size: {
-        sm: 'h-8 px-3 text-body-sm',
-        md: 'h-10 px-4 text-body',
-        lg: 'h-12 px-6 text-body-lg',
+        sm: 'min-h-(--oct-control-height-sm) min-w-(--oct-control-height-sm) px-(--oct-control-px-sm)',
+        md: 'min-h-(--oct-control-height-md) min-w-(--oct-control-height-md) px-(--oct-control-px-md)',
+        lg: 'min-h-(--oct-control-height-lg) min-w-(--oct-control-height-lg) px-(--oct-control-px-lg)',
       },
       block: {
         true: 'w-full',

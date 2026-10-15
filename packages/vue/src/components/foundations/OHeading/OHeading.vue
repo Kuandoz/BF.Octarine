@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useClasses } from '../../../composables/useClasses'
 import { cva, type VariantProps } from '../../../utils/variants'
 
-const heading = cva('font-display text-fg text-balance', {
+const heading = cva('text-fg text-balance', {
   variants: {
     size: {
       display: 'text-display',

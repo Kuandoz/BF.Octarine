@@ -2,17 +2,17 @@
 import { useClasses } from '../../../composables/useClasses'
 import { cva, type VariantProps } from '../../../utils/variants'
 
-const card = cva('flex flex-col rounded-xl bg-surface text-fg', {
+const card = cva('theme-border flex flex-col rounded-card bg-surface text-fg', {
   variants: {
     variant: {
-      outlined: 'border border-border',
-      elevated: 'bg-surface-raised shadow-md',
-      sunken: 'bg-surface-sunken',
+      outlined: 'border-(--oct-card-border)',
+      elevated: 'border-(--oct-card-elevated-border) bg-surface-raised shadow-card',
+      sunken: 'border-transparent bg-surface-sunken',
     },
     padding: {
       none: '',
       sm: 'gap-3 p-4',
-      md: 'gap-4 p-6',
+      md: 'gap-4 p-(--oct-card-padding)',
       lg: 'gap-6 p-8',
     },
   },

@@ -3,7 +3,11 @@ import { useClasses } from '../../../composables/useClasses'
 import { cva, type VariantProps } from '../../../utils/variants'
 
 const spinner = cva(
-  'inline-block shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent',
+  [
+    'inline-block shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent',
+    // Slow down instead of stopping, so loading is still visible (WCAG 2.3.3).
+    'motion-reduce:[animation-duration:2.4s]',
+  ],
   {
     variants: {
       size: {

@@ -1,10 +1,8 @@
-import { computed, onScopeDispose, ref, watchEffect } from 'vue'
-
-export type ThemePreference = 'light' | 'dark' | 'system'
+import { defaultTheme, themes, type ThemeName } from '@octarine/tokens'
+import { onScopeDispose, ref, watchEffect } from 'vue'
 
 const STORAGE_KEY = 'octarine-theme'
-const preference = ref<ThemePreference>('system')
-const systemDark = ref(false)
+const theme = ref<ThemeName>(defaultTheme.name as ThemeName)
 let initialized = false
 
 function init() {
@@ -12,40 +10,42 @@ function init() {
   initialized = true
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'light' || stored === 'dark' || stored === 'system') preference.value = stored
+    if (stored && stored in themes) theme.value = stored as ThemeName
   } catch {
     // Storage can be unavailable (private mode, sandboxed iframes).
   }
-  const media = window.matchMedia('(prefers-color-scheme: dark)')
-  systemDark.value = media.matches
-  media.addEventListener('change', (e) => (systemDark.value = e.matches))
+}
+
+/** Adds the theme's web-font stylesheet to <head> once. */
+function loadFonts(name: ThemeName) {
+  const href = themes[name].fonts.href
+  if (!href || document.querySelector(`link[data-octarine-fonts="${name}"]`)) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  link.dataset.octarineFonts = name
+  document.head.append(link)
 }
 
 /**
- * Light/dark switching. Sets `data-theme` on <html>, which swaps the semantic
- * color tokens; components themselves never need `dark:` classes.
+ * Theme switching. Sets `data-theme` on <html>; the theme's CSS must be loaded
+ * (`@import '@octarine/tokens/themes/all.css'`, or a single theme's file).
+ * Combine with `useColorMode()` for light/dark.
  */
-export function useTheme() {
+export function useTheme(options: { loadFonts?: boolean } = {}) {
   init()
-
-  const resolved = computed<'light' | 'dark'>(() =>
-    preference.value === 'system' ? (systemDark.value ? 'dark' : 'light') : preference.value,
-  )
 
   const stop = watchEffect(() => {
     if (typeof document === 'undefined') return
-    document.documentElement.dataset.theme = resolved.value
+    document.documentElement.dataset.theme = theme.value
+    if (options.loadFonts !== false) loadFonts(theme.value)
     try {
-      localStorage.setItem(STORAGE_KEY, preference.value)
+      localStorage.setItem(STORAGE_KEY, theme.value)
     } catch {
       // Ignore: the preference just won't persist.
     }
   })
   onScopeDispose(stop)
 
-  return {
-    preference,
-    resolved,
-    toggle: () => (preference.value = resolved.value === 'dark' ? 'light' : 'dark'),
-  }
+  return { theme, themes }
 }

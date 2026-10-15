@@ -10,8 +10,8 @@ const text = cva('', {
       'body-sm': 'text-body-sm',
       label: 'text-label',
       caption: 'text-caption',
-      overline: 'text-overline uppercase',
-      code: 'text-code font-mono',
+      overline: 'text-overline',
+      code: 'text-code',
     },
     tone: {
       default: 'text-fg',
