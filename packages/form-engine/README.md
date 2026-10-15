@@ -283,15 +283,13 @@ validation (e.g. a server-side uniqueness check) is intentionally not
 supported yet; it would change `setValue`'s contract and is left as a future
 extension rather than something bolted on now.
 
-Field components don't have to go through `FormEngine`'s validation results at
-all for simple cases — `formEngine.hasValidationRule(path, type)` lets a
-wrapper check whether a path carries a given rule (e.g. to set a UI-only
-`required` prop) without caring about current validation state. It resolves
-the same wildcard lookup `validatePath`/`validateModel` do internally, so it
-works the same way whether `path` is top-level or inside a `repeat`:
+A field shows its required marker from `formEngine.isRequired(path)`: true when
+the path has a `required` rule whose `condition` (if any) holds right now,
+evaluated exactly as validation does, in the row's scope inside a `repeat`. So
+a required-if field shows `*` only while validation would demand a value:
 
 ```ts
-:required="formEngine.hasValidationRule(path, 'required')"
+:required="formEngine.isRequired(path)"
 ```
 
 `getValidationResult(path)` returning `undefined` means "no rule is declared

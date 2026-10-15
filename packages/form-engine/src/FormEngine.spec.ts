@@ -172,11 +172,10 @@ describe('FormEngine', () => {
     expect(engine.getValidationResult('firstName')?.message).toBe('Dit veld is verplicht.')
   })
 
-  it('reports whether a path has a validation rule of a given type', () => {
+  it('reports whether a path is required', () => {
     const engine = new FormEngine(definition)
-    expect(engine.hasValidationRule('firstName', 'required')).toBe(true)
-    expect(engine.hasValidationRule('lastName', 'required')).toBe(false)
-    expect(engine.hasValidationRule('firstName', 'minLength')).toBe(false)
+    expect(engine.isRequired('firstName')).toBe(true)
+    expect(engine.isRequired('lastName')).toBe(false)
   })
 
   it("localises a field label using the form's own localisations", () => {
@@ -491,10 +490,10 @@ describe('FormEngine', () => {
       expect(engine.validatePath('items.0.quantity').valid).toBe(true)
     })
 
-    it('reports hasValidationRule for a resolved path inside a repeat, via the wildcard entry', () => {
+    it('reports isRequired for a resolved path inside a repeat, via the wildcard entry', () => {
       const engine = new FormEngine(withRepeat, { items: [{ type: 'x' }] })
-      expect(engine.hasValidationRule('items.0.quantity', 'required')).toBe(true)
-      expect(engine.hasValidationRule('items.0.label', 'required')).toBe(false)
+      expect(engine.isRequired('items.0.quantity')).toBe(true)
+      expect(engine.isRequired('items.0.label')).toBe(false)
     })
 
     it('supports repeats nested inside repeats, resolving the innermost row', () => {

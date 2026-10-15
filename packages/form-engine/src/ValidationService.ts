@@ -39,19 +39,7 @@ export class ValidationService {
     rootScope: Record<string, unknown> = scope,
   ): ValidationResult {
     for (const rule of rules ?? []) {
-      // A rule's own `condition` gates whether it runs at all (the
-      // requiredIf/forbiddenIf use case). Unlike hide/disabled/readonly,
-      // this defaults toward the rule staying *active* if the expression
-      // throws — better to over-validate than silently let bad data through
-      // because of a broken condition.
-      if (rule.condition !== undefined) {
-        const conditionMet = this.expressionService.resolve(
-          rule.condition,
-          { scope, rootScope },
-          true,
-        )
-        if (!conditionMet) continue
-      }
+      if (!this.isActive(rule, scope, rootScope)) continue
 
       const validator = this.validators[rule.type]
       if (!validator) {
@@ -64,5 +52,19 @@ export class ValidationService {
       if (!result.valid) return { ...result, message: rule.message ?? result.message }
     }
     return { valid: true }
+  }
+
+  // A rule's own `condition` gates whether it runs at all (the
+  // requiredIf/forbiddenIf use case). Unlike hide/disabled/readonly, this
+  // defaults toward the rule staying *active* if the expression throws —
+  // better to over-validate than silently let bad data through because of a
+  // broken condition.
+  isActive(
+    rule: ValidationRule,
+    scope: Record<string, unknown> = {},
+    rootScope: Record<string, unknown> = scope,
+  ): boolean {
+    if (rule.condition === undefined) return true
+    return this.expressionService.resolve(rule.condition, { scope, rootScope }, true)
   }
 }

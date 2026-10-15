@@ -231,10 +231,17 @@ export class FormEngine {
     )
   }
 
-  hasValidationRule(path: string, type: string): boolean {
-    const { wildcardPath } = this.resolvePathContext(path)
-    const rules = this.definition.validations?.[wildcardPath]
-    return (rules ?? []).some((rule) => rule.type === type)
+  // Whether validation will demand a value at `path` right now: it has a
+  // `required` rule whose `condition` (if any) holds, evaluated the way
+  // validation evaluates it. Fields use this for their required marker, so
+  // the marker never promises more, or less, than validation checks.
+  isRequired(path: string): boolean {
+    const { wildcardPath, repeatContext } = this.resolvePathContext(path)
+    const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
+    return (this.definition.validations?.[wildcardPath] ?? []).some(
+      (rule) =>
+        rule.type === 'required' && this._validationService.isActive(rule, scope, this._model),
+    )
   }
 
   localise(key: LocalisableString | undefined, repeatContext?: RepeatContext): string {
