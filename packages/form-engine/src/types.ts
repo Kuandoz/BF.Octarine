@@ -1,4 +1,4 @@
-// A boolean literal, a sandboxjs expression string evaluated against the
+// A boolean literal, an expression string evaluated against the
 // current scope (e.g. "age(birthDate) > 18"), or an object form that can
 // force root-scope evaluation (`root: true` — ignores whatever repeated-item
 // scope would otherwise apply) and/or override the fallback used if the
@@ -46,6 +46,9 @@ export interface FormLocalisations {
 
 export interface FormDefinition {
   components: FieldDefinition[]
+  // The language the form's expressions are written in, by name: 'js' (the
+  // default) or any other ExpressionLanguage the app registered.
+  expressions?: string
   // Keyed by a field's resolved dot-path (e.g. "address.street"). A path
   // segment inside a `repeat` field is a wildcard `*` instead of a concrete
   // index (e.g. "items.*.quantity") — one entry covers every row; expanded

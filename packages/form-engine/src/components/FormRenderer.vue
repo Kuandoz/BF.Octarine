@@ -6,7 +6,7 @@ import FormComponent from './FormComponent.vue'
 import { FORM_ENGINE_KEY } from '../composables/useFormEngine'
 import { FormEngine } from '../FormEngine'
 import { type ComponentRegistry, getGlobalRegistry, REGISTRY_KEY } from '../registry'
-import { useListProvider, useTranslation } from '../services'
+import { useExpressionLanguages, useListProvider, useTranslation } from '../services'
 import type { FormDefinition } from '../types'
 import type { ValidatorRegistry } from '../validators'
 
@@ -21,6 +21,7 @@ const props = defineProps<{
 
 const translation = useTranslation()
 const listProvider = useListProvider()
+const expressionLanguages = useExpressionLanguages()
 
 const engine = computed(() => {
   if (props.formEngine) return props.formEngine
@@ -36,6 +37,7 @@ const engine = computed(() => {
     translation,
     props.locale,
     listProvider,
+    expressionLanguages,
   )
 })
 

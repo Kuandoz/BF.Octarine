@@ -3,11 +3,13 @@ import { reactive, ref } from 'vue'
 import mitt from 'mitt'
 
 import { ExpressionService } from './ExpressionService'
+import { type ExpressionLanguage, findExpressionLanguage } from './expressions'
 import { ListService } from './ListService'
 import { LocalisationService } from './LocalisationService'
 import { mergeDeep } from './mergeDeep'
 import { declareFieldKeys, getProperty, removeProperty, setProperty } from './pathAccessors'
 import {
+  defaultExpressionLanguages,
   defaultListProvider,
   defaultTranslationProvider,
   type ListProvider,
@@ -64,6 +66,7 @@ export class FormEngine {
     translationProvider: TranslationProvider = defaultTranslationProvider,
     locale?: string,
     listProvider: ListProvider = defaultListProvider,
+    expressionLanguages: readonly ExpressionLanguage[] = defaultExpressionLanguages,
   ) {
     this.definition = definition
     this._defaults = definition.defaults ?? {}
@@ -78,7 +81,9 @@ export class FormEngine {
     declareFieldKeys(definition.components, seeded)
     this._model = reactive(seeded)
 
-    this._expressionService = new ExpressionService()
+    this._expressionService = new ExpressionService(
+      findExpressionLanguage(expressionLanguages, definition.expressions),
+    )
     this._validationService = new ValidationService(
       validators,
       translationProvider,

@@ -384,7 +384,45 @@ been touched. Referencing something that was never a declared field's path at
 all still throws (and falls back to the default), which is deliberate: it
 catches a genuine typo rather than silently evaluating to `undefined`.
 
-**What this replaces**: the legacy `_forms` system had a second, separate
+### Expression languages
+
+Expressions are evaluated by an `ExpressionLanguage`, so the language can be
+swapped. A form names the one it is written in, `"js"` by default:
+
+```json
+{ "expressions": "feel", "components": [...] }
+```
+
+A language only parses and evaluates:
+
+```ts
+interface ExpressionLanguage {
+  name: string // what a form names in `expressions`
+  compile(source: string): CompiledExpression // throws an ExpressionError
+}
+
+interface CompiledExpression {
+  evaluate(context: { scope; env; functions }): unknown
+  dependencies?: readonly string[] // model paths it reads, for editors
+}
+```
+
+Everything else is the engine's and works the same in every language: the
+scope (the row inside a repeat, the whole model with `root: true`), the
+functions an expression can call (`age()`), `env`, the fallbacks when an
+expression fails, and caching compiled expressions by source.
+
+Register extra languages for every `FormRenderer` below a component; one named
+`"js"` replaces the built-in one:
+
+```ts
+provideFormRendererServices({ expressionLanguages: [feelLanguage] })
+```
+
+A form that names a language nobody registered fails when its `FormEngine` is
+created, instead of quietly falling back on every condition.
+
+`_forms` system had a second, separate
 condition mechanism (`{path, op, value}` structural comparison, plus yet
 another one for validation-only `requiredIf`/`forbiddenIf` conditions) with
 inconsistent operator sets between the two. Both are gone — sandboxjs

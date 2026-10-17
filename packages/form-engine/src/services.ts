@@ -1,5 +1,8 @@
 import { inject, type InjectionKey, provide } from 'vue'
 
+import type { ExpressionLanguage } from './expressions'
+import { sandboxjsLanguage } from './sandboxjsLanguage'
+
 export interface TranslationProvider {
   t(key: string, params?: Record<string, unknown>): string
 }
@@ -21,6 +24,9 @@ export const TRANSLATION_PROVIDER_KEY: InjectionKey<TranslationProvider> = Symbo
 )
 export const POPUP_SERVICE_KEY: InjectionKey<PopupService> = Symbol('octarine-form:popup-service')
 export const LIST_PROVIDER_KEY: InjectionKey<ListProvider> = Symbol('octarine-form:list-provider')
+export const EXPRESSION_LANGUAGES_KEY: InjectionKey<readonly ExpressionLanguage[]> = Symbol(
+  'octarine-form:expression-languages',
+)
 
 // Fallback English text for this package's own keys, used when no real i18n
 // integration has been wired up via `provideFormRendererServices`/the
@@ -69,16 +75,32 @@ export const defaultListProvider: ListProvider = {
   getList: () => [],
 }
 
+// The languages a form can name in `definition.expressions`. 'js' is always
+// one of them.
+export const defaultExpressionLanguages: readonly ExpressionLanguage[] = [sandboxjsLanguage]
+
 export interface FormRendererServiceOverrides {
   translationProvider?: TranslationProvider
   popupService?: PopupService
   listProvider?: ListProvider
+  // Added to the built-in 'js' language; one with the same name replaces it.
+  expressionLanguages?: readonly ExpressionLanguage[]
+}
+
+// The built-in languages plus `extra`, where an extra one with the same name
+// wins.
+export function withExpressionLanguages(
+  extra: readonly ExpressionLanguage[] = [],
+): readonly ExpressionLanguage[] {
+  const names = new Set(extra.map((language) => language.name))
+  return [...extra, ...defaultExpressionLanguages.filter((language) => !names.has(language.name))]
 }
 
 export function provideFormRendererServices(overrides: FormRendererServiceOverrides = {}): void {
   provide(TRANSLATION_PROVIDER_KEY, overrides.translationProvider ?? defaultTranslationProvider)
   provide(POPUP_SERVICE_KEY, overrides.popupService ?? defaultPopupService)
   provide(LIST_PROVIDER_KEY, overrides.listProvider ?? defaultListProvider)
+  provide(EXPRESSION_LANGUAGES_KEY, withExpressionLanguages(overrides.expressionLanguages))
 }
 
 export function useTranslation(): TranslationProvider {
@@ -91,4 +113,8 @@ export function usePopupService(): PopupService {
 
 export function useListProvider(): ListProvider {
   return inject(LIST_PROVIDER_KEY, defaultListProvider)
+}
+
+export function useExpressionLanguages(): readonly ExpressionLanguage[] {
+  return inject(EXPRESSION_LANGUAGES_KEY, defaultExpressionLanguages)
 }

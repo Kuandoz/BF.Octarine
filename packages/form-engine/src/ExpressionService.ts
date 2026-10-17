@@ -1,5 +1,9 @@
-import { Sandbox } from '@nyariv/sandboxjs'
-
+import {
+  type CompiledExpression,
+  type ExpressionFunction,
+  type ExpressionLanguage,
+} from './expressions'
+import { sandboxjsLanguage } from './sandboxjsLanguage'
 import type { ConditionValue } from './types'
 import { warnOnce } from './warn'
 
@@ -23,13 +27,28 @@ function calculateAge(birthDate: unknown): number | undefined {
   return years
 }
 
-type CompiledExpression = (scope: Record<string, unknown>) => { run(): unknown }
+// The functions every expression can call, whatever its language.
+export const defaultExpressionFunctions: Record<string, ExpressionFunction> = {
+  age: calculateAge,
+}
 
+// Resolves a ConditionValue to a boolean through an ExpressionLanguage. The
+// language only parses and evaluates; scope, functions, fallbacks and caching
+// are handled here, the same for every language.
 export class ExpressionService {
-  // Compiled once per unique expression string and reused — the legacy
-  // `_forms` system recompiled the same expression on every single
-  // reactive re-evaluation, which this fixes.
+  readonly language: ExpressionLanguage
+  private functions: Record<string, ExpressionFunction>
+  // Compiled once per unique expression string and reused, so a condition
+  // isn't parsed again on every reactive re-evaluation.
   private compiled = new Map<string, CompiledExpression>()
+
+  constructor(
+    language: ExpressionLanguage = sandboxjsLanguage,
+    functions: Record<string, ExpressionFunction> = defaultExpressionFunctions,
+  ) {
+    this.language = language
+    this.functions = functions
+  }
 
   resolve(
     condition: ConditionValue | undefined,
@@ -52,6 +71,17 @@ export class ExpressionService {
     )
   }
 
+  // Compiles `source` (or returns the cached result). Throws an
+  // ExpressionError for an expression the language can't parse.
+  compile(source: string): CompiledExpression {
+    let compiled = this.compiled.get(source)
+    if (!compiled) {
+      compiled = this.language.compile(source)
+      this.compiled.set(source, compiled)
+    }
+    return compiled
+  }
+
   private evaluate(
     expression: string,
     scope: Record<string, unknown>,
@@ -59,18 +89,12 @@ export class ExpressionService {
     defaultResult: boolean,
   ): boolean {
     try {
-      let compiled = this.compiled.get(expression)
-      if (!compiled) {
-        // `compile` + an explicit `return` (matching the legacy `_forms`
-        // system) rather than `compileExpression` — the latter doesn't
-        // correctly resolve scope in the installed sandboxjs version
-        // (confirmed directly: it silently returns `undefined`).
-        compiled = new Sandbox().compile<unknown>(`return ${expression}`)
-        this.compiled.set(expression, compiled)
-      }
-
-      const execScope = { ...scope, env: { ...env }, age: calculateAge }
-      return !!compiled(execScope).run()
+      const result = this.compile(expression).evaluate({
+        scope,
+        env: { ...env },
+        functions: this.functions,
+      })
+      return !!result
     } catch (error) {
       warnOnce(`[form-engine] Failed to evaluate expression "${expression}"`, error)
       return defaultResult
