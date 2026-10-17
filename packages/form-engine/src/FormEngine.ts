@@ -230,7 +230,7 @@ export class FormEngine {
     const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
     return this._expressionService.resolve(
       condition,
-      { scope, rootScope: this._model, env: { language: this._localisationService.locale } },
+      { scope, rootScope: this._model, env: this.env },
       defaultResult,
     )
   }
@@ -253,7 +253,14 @@ export class FormEngine {
     const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
     const result = this.isHidden(path)
       ? { valid: true }
-      : this._validationService.validate(rules, this.getValue(path), path, scope, this._model)
+      : this._validationService.validate(
+          rules,
+          this.getValue(path),
+          path,
+          scope,
+          this._model,
+          this.env,
+        )
     this._validationResults[path] = result
     return result
   }
@@ -266,7 +273,14 @@ export class FormEngine {
         const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
         const result = this.isHidden(path)
           ? { valid: true }
-          : this._validationService.validate(rules, this.getValue(path), path, scope, this._model)
+          : this._validationService.validate(
+              rules,
+              this.getValue(path),
+              path,
+              scope,
+              this._model,
+              this.env,
+            )
         this._validationResults[path] = result
         validated.add(path)
         if (!result.valid) valid = false
@@ -314,7 +328,8 @@ export class FormEngine {
     const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
     return (this.definition.validations?.[wildcardPath] ?? []).some(
       (rule) =>
-        rule.type === 'required' && this._validationService.isActive(rule, scope, this._model),
+        rule.type === 'required' &&
+        this._validationService.isActive(rule, scope, this._model, this.env),
     )
   }
 
@@ -339,6 +354,11 @@ export class FormEngine {
 
   getList(name: string): Promise<unknown[]> {
     return this._listService.getList(name)
+  }
+
+  // What expressions see as `env`: facts about where the form runs.
+  private get env(): Record<string, unknown> {
+    return { language: this._localisationService.locale }
   }
 
   private getRowScope(repeatContext: RepeatContext): Record<string, unknown> {

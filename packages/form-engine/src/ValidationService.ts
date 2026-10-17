@@ -37,9 +37,10 @@ export class ValidationService {
     path: string,
     scope: Record<string, unknown> = {},
     rootScope: Record<string, unknown> = scope,
+    env: Record<string, unknown> = {},
   ): ValidationResult {
     for (const rule of rules ?? []) {
-      if (!this.isActive(rule, scope, rootScope)) continue
+      if (!this.isActive(rule, scope, rootScope, env)) continue
 
       const validator = this.validators[rule.type]
       if (!validator) {
@@ -63,8 +64,9 @@ export class ValidationService {
     rule: ValidationRule,
     scope: Record<string, unknown> = {},
     rootScope: Record<string, unknown> = scope,
+    env: Record<string, unknown> = {},
   ): boolean {
     if (rule.condition === undefined) return true
-    return this.expressionService.resolve(rule.condition, { scope, rootScope }, true)
+    return this.expressionService.resolve(rule.condition, { scope, rootScope, env }, true)
   }
 }

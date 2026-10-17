@@ -66,3 +66,25 @@ describe('isRequired', () => {
     expect(engine.isRequired('items.1.reason')).toBe(true)
   })
 })
+
+// A rule's condition sees the same `env` as hide/disabled/readonly.
+describe('rule conditions and env', () => {
+  const definition = (): FormDefinition => ({
+    components: [{ type: 'text', path: 'vatNumber', hide: "env.language !== 'fr'" }],
+    validations: {
+      vatNumber: [{ type: 'required', condition: "env.language === 'fr'" }],
+    },
+  })
+
+  it('is required and validated when the condition on env holds', () => {
+    const engine = new FormEngine(definition(), {}, undefined, undefined, 'fr')
+    expect(engine.isHidden('vatNumber')).toBe(false)
+    expect(engine.isRequired('vatNumber')).toBe(true)
+    expect(engine.submit()).toBe(false)
+  })
+
+  it('is not required when it does not', () => {
+    const engine = new FormEngine(definition(), {}, undefined, undefined, 'nl')
+    expect(engine.isRequired('vatNumber')).toBe(false)
+  })
+})
