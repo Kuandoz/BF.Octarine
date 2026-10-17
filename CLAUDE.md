@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Octarine is a Vue 3 + Tailwind CSS v4 design system in a pnpm monorepo. See `README.md` for the
-full overview.
+full overview. Ongoing work on the JSON forms (status, decisions, next steps) is tracked in
+`HANDOFF.md`; keep it current.
 
 ## Layout
 
