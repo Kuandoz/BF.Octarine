@@ -3,7 +3,7 @@ import {
   type ExpressionFunction,
   type ExpressionLanguage,
 } from './expressions'
-import { sandboxjsLanguage } from './sandboxjsLanguage'
+import { jsLanguage } from './jsLanguage'
 import type { ConditionValue } from './types'
 import { warnOnce } from './warn'
 
@@ -43,7 +43,7 @@ export class ExpressionService {
   private compiled = new Map<string, CompiledExpression>()
 
   constructor(
-    language: ExpressionLanguage = sandboxjsLanguage,
+    language: ExpressionLanguage = jsLanguage,
     functions: Record<string, ExpressionFunction> = defaultExpressionFunctions,
   ) {
     this.language = language

@@ -1,7 +1,7 @@
 import { inject, type InjectionKey, provide } from 'vue'
 
 import type { ExpressionLanguage } from './expressions'
-import { sandboxjsLanguage } from './sandboxjsLanguage'
+import { jsLanguage } from './jsLanguage'
 
 export interface TranslationProvider {
   t(key: string, params?: Record<string, unknown>): string
@@ -77,7 +77,7 @@ export const defaultListProvider: ListProvider = {
 
 // The languages a form can name in `definition.expressions`. 'js' is always
 // one of them.
-export const defaultExpressionLanguages: readonly ExpressionLanguage[] = [sandboxjsLanguage]
+export const defaultExpressionLanguages: readonly ExpressionLanguage[] = [jsLanguage]
 
 export interface FormRendererServiceOverrides {
   translationProvider?: TranslationProvider

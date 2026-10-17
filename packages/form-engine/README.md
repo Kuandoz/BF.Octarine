@@ -332,19 +332,39 @@ export type ConditionValue =
   boolean | string | { expression: string; root?: boolean; defaultValue?: boolean }
 ```
 
-A string is a [sandboxjs](https://github.com/nyariv/SandboxJS) expression,
-evaluated against the model as the scope — reference any field by name
-directly, no `model.` prefix:
+A string is an expression in the form's [expression language](#expression-languages),
+`js` by default, evaluated against the model as the scope — reference any
+field by name directly, no `model.` prefix:
 
 ```ts
 { type: "text", path: "email", hide: "subscribe !== true" }
 ```
 
-Sandboxjs runs the expression in a real (allowlisted) JS sandbox — no access
-to `window`/`document`/globals, but ordinary JS syntax works (`?.`,
-comparisons, template literals). Compiled expressions are cached by string
-(`ExpressionService`, also exported), so the same condition string isn't
-recompiled on every reactive re-evaluation.
+The `js` language is JS expression syntax, parsed by
+[subscript](https://github.com/dy/subscript) and evaluated by the engine:
+
+- comparisons (`===`, `!==`, `==`, `<`, …), `&&`, `||`, `!`, `??`, `? :`,
+  arithmetic, `typeof`, parentheses, string/number/boolean/`null` literals and
+  arrays;
+- reading fields (`contact.mode`, `items[0].name`, `items.length`, `?.`);
+- calling the form's functions (`age(birthDate)`) and a few methods:
+  `includes`, `startsWith`, `endsWith`, `toLowerCase`, `toUpperCase`, `trim`
+  on strings, and `includes`, `indexOf`, `join` on arrays.
+
+It can't assign, define functions, or reach anything outside its scope.
+Properties are read from plain data only (own properties of objects, indexes
+and `length` of arrays and strings), so `constructor`, `__proto__` and globals
+are out of reach, and functions stored in the model can't be called.
+
+One difference from JS: reading a property of a missing value gives `undefined`
+instead of throwing, so `contact.address.city === 'Ghent'` works before
+`address` was filled in. A name that is neither a field, `env` nor a function
+still fails (and falls back to the default), so a typo is reported.
+
+Compiled expressions are cached by source, so the same condition isn't parsed
+again on every reactive re-evaluation. `jsLanguage.compile(source)` also lists
+the model paths an expression reads (`dependencies`), for editors and the
+builder.
 
 An `age(birthDate)` helper and `env.language` (the current locale) are always
 available to expressions:
@@ -425,17 +445,9 @@ created, instead of quietly falling back on every condition.
 `_forms` system had a second, separate
 condition mechanism (`{path, op, value}` structural comparison, plus yet
 another one for validation-only `requiredIf`/`forbiddenIf` conditions) with
-inconsistent operator sets between the two. Both are gone — sandboxjs
-expressions already express any comparison a structural form could
+inconsistent operator sets between the two. Both are gone — expressions already express any comparison a structural form could
 (`redactionPlace === 'OtherMunicipality'`), just more flexibly, so there's
 only one mechanism to learn and maintain.
-
-**Not built yet**: repeated/array field types, and the scope-per-array-item
-behavior that goes with them (referencing the current row's own fields
-unqualified). `ExpressionService`'s `scope`/`rootScope` split already exists
-for this — a future repeated-group field type just passes the row as `scope`
-and the form's root model as `rootScope`, no `ExpressionService` changes
-needed.
 
 ## Localisation
 

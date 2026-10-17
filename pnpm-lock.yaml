@@ -264,6 +264,9 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
+      subscript:
+        specifier: ^10.8.1
+        version: 10.8.1
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.10
@@ -2229,6 +2232,9 @@ packages:
   strip-indent@3.0.0:
     resolution: {integrity: sha512-laJTa3Jb+VQpaC6DseHhF7dXVqHTfJPCRDaEbid/drOhgitgYku/letMUqOXFoWV0zIIUbjpdH2t+tYj4bQMRQ==}
     engines: {node: '>=8'}
+
+  subscript@10.8.1:
+    resolution: {integrity: sha512-aVBJ+SWY8J8ImNk9c1iM4AnK0NSkenyxYp+Msi+NudXCqIcn7Ka83D6agkkYpzq5WDUMk90y5yv1qpneaKP+hA==}
 
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
@@ -4361,6 +4367,8 @@ snapshots:
   strip-indent@3.0.0:
     dependencies:
       min-indent: 1.0.1
+
+  subscript@10.8.1: {}
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
