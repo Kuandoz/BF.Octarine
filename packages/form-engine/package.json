@@ -24,7 +24,6 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@nyariv/sandboxjs": "^0.9.6",
     "mitt": "^3.0.1",
     "subscript": "^10.8.1"
   },

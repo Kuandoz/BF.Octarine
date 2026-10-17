@@ -258,9 +258,6 @@ importers:
 
   packages/form-engine:
     dependencies:
-      '@nyariv/sandboxjs':
-        specifier: ^0.9.6
-        version: 0.9.7
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -692,9 +689,6 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
-
-  '@nyariv/sandboxjs@0.9.7':
-    resolution: {integrity: sha512-f/uSBJrEQ+yqyHgVd0ywFPhIAMyBSCCqTi5DThcOs6moUvZJi4t6jiAV78iwyDD+IWqoAGIIb9bAWZVdrMttTA==}
 
   '@one-ini/wasm@0.2.1':
     resolution: {integrity: sha512-TUqERXGNTifZ9y2g3wPxQrw3HpHv/02DsW3D90T9x0hhonrL1ZqpSmNrU2XkoIq0fP1N6gZfVQzy2Fw1ZvGBNg==}
@@ -2763,8 +2757,6 @@ snapshots:
       '@emnapi/runtime': 1.9.2
       '@tybys/wasm-util': 0.10.4
     optional: true
-
-  '@nyariv/sandboxjs@0.9.7': {}
 
   '@one-ini/wasm@0.2.1': {}
 
