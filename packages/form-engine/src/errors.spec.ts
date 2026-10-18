@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { FormEngine } from './FormEngine'
 import type { FormDefinition } from './types'
-import type { ValidatorContext } from './validators'
+import type { ValidatorContext } from './types'
 
 // Errors appear once the user has left a field or tried to submit, not while
 // they are still typing the first characters.

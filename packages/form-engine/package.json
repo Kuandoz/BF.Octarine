@@ -1,7 +1,7 @@
 {
   "name": "@octarine/form-engine",
   "version": "0.1.0",
-  "description": "Headless engine that renders forms from a JSON definition: model, validation, conditions, localisation and lists.",
+  "description": "Headless Vue engine that renders forms from a JSON definition: reactive model, touched and submitted state, error messages and the renderer. The rules run in @octarine/form-core.",
   "type": "module",
   "sideEffects": [
     "*.css"
@@ -24,8 +24,9 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "mitt": "^3.0.1",
-    "subscript": "^10.8.1"
+    "@octarine/form-abstractions": "workspace:*",
+    "@octarine/form-core": "workspace:*",
+    "mitt": "^3.0.1"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

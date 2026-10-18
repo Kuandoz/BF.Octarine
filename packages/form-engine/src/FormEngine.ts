@@ -2,47 +2,50 @@ import { reactive, ref } from 'vue'
 
 import mitt from 'mitt'
 
-import { ExpressionService } from './ExpressionService'
-import { type ExpressionLanguage, findExpressionLanguage } from './expressions'
-import { ListService } from './ListService'
-import { LocalisationService } from './LocalisationService'
-import { mergeDeep } from './mergeDeep'
-import { declareFieldKeys, getProperty, removeProperty, setProperty } from './pathAccessors'
 import {
-  defaultExpressionLanguages,
+  collectFields,
+  collectHideConditions,
+  declareFieldKeys,
   defaultListProvider,
   defaultTranslationProvider,
-  type ListProvider,
-  type TranslationProvider,
-} from './services'
+  findClosest,
+  FormValidator,
+  getProperty,
+  type HideCondition,
+  INVALID_KEY,
+  ListService,
+  LocalisationService,
+  type PathContext,
+  removeProperty,
+  resolvePathContext,
+  setProperty,
+} from '@octarine/form-core'
+
+import { mergeDeep } from './mergeDeep'
+import { defaultExpressionLanguages } from './services'
 import type {
   ConditionValue,
+  ExpressionLanguage,
   FieldDefinition,
   FormDefinition,
   FormError,
+  ListProvider,
   LocalisableString,
   RepeatContext,
+  TranslationProvider,
   ValidationResult,
+  ValidatorRegistry,
 } from './types'
-import { ValidationService } from './ValidationService'
-import type { ValidatorRegistry } from './validators'
-import { collectFields, collectHideConditions, findClosest, type HideCondition } from './visibility'
 
 type FormEngineEvents = {
   modelChanged: { path: string }
 }
 
-interface PathContext {
-  // `path` with every array-index segment (one that sits under an actual
-  // array in the live model) replaced by `*` — the key validations are
-  // declared under, e.g. "items.2.quantity" -> "items.*.quantity".
-  wildcardPath: string
-  // The innermost repeat row `path` sits in, if any.
-  repeatContext?: RepeatContext
-  // Every repeat row `path` sits in, outermost first.
-  repeatContexts: RepeatContext[]
-}
-
+// The Vue side of a form: the reactive model, what was touched and
+// submitted, and errors put into words. The rules themselves run in
+// form-core's FormValidator, the same code the server runs; Vue tracks the
+// model reads inside it, so results stay reactive without a second
+// implementation.
 export class FormEngine {
   readonly definition: FormDefinition
 
@@ -53,8 +56,7 @@ export class FormEngine {
   private _submitted = ref(false)
   private _translate: TranslationProvider['t']
   private _emitter = mitt<FormEngineEvents>()
-  private _expressionService: ExpressionService
-  private _validationService: ValidationService
+  private _validator: FormValidator
   private _localisationService: LocalisationService
   private _listService: ListService
   private _defaults: Record<string, unknown>
@@ -88,14 +90,7 @@ export class FormEngine {
     declareFieldKeys(definition.components, seeded)
     this._model = reactive(seeded)
 
-    this._expressionService = new ExpressionService(
-      findExpressionLanguage(expressionLanguages, definition.expressions),
-    )
-    this._validationService = new ValidationService(
-      validators,
-      translationProvider,
-      this._expressionService,
-    )
+    this._validator = new FormValidator(definition, { validators, expressionLanguages })
     this._localisationService = new LocalisationService(
       definition.localisations,
       locale,
@@ -177,7 +172,11 @@ export class FormEngine {
     if (!this._submitted.value && !this._touchedPaths.has(path)) return undefined
     const result = this.getValidationResult(path)
     if (!result || result.valid) return undefined
-    return result.message || this._translate('formRenderer.validation.invalid')
+    // A rule's own message is the form's text (a localisation key or
+    // literal); otherwise the validator's key, in the app's words.
+    if (result.message)
+      return this.localise(result.message, this.resolvePathContext(path).repeatContext)
+    return this._translate(result.key || INVALID_KEY, result.params)
   }
 
   // Every error getError would show, in the order the fields appear on
@@ -274,11 +273,12 @@ export class FormEngine {
     defaultResult = false,
     repeatContext?: RepeatContext,
   ): boolean {
-    const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-    return this._expressionService.resolve(
+    return this._validator.resolveCondition(
+      this._model,
       condition,
-      { scope, rootScope: this._model, env: this.env },
       defaultResult,
+      repeatContext,
+      this.env,
     )
   }
 
@@ -304,45 +304,19 @@ export class FormEngine {
   // other, so a value can't slip through by hiding its field. A form that asks
   // for a value only while it is shown pairs `hide` with a rule `condition`.
   validatePath(path: string): ValidationResult {
-    const { wildcardPath, repeatContext } = this.resolvePathContext(path)
-    const rules = this.definition.validations?.[wildcardPath]
-    const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-    const result = this._validationService.validate(
-      rules,
-      this.getValue(path),
-      path,
-      scope,
-      this._model,
-      this.env,
-    )
+    const result = this._validator.validatePath(this._model, path, this.env)
     this._validationResults[path] = result
     return result
   }
 
   validateModel(): boolean {
-    let valid = true
-    const validated = new Set<string>()
-    for (const [wildcardKey, rules] of Object.entries(this.definition.validations ?? {})) {
-      for (const { path, repeatContext } of this.expandWildcardPaths(wildcardKey)) {
-        const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-        const result = this._validationService.validate(
-          rules,
-          this.getValue(path),
-          path,
-          scope,
-          this._model,
-          this.env,
-        )
-        this._validationResults[path] = result
-        validated.add(path)
-        if (!result.valid) valid = false
-      }
-    }
+    const results = this._validator.validateAll(this._model, this.env)
+    for (const [path, result] of results) this._validationResults[path] = result
     // Rows that were removed leave results behind; drop them.
     for (const path of Object.keys(this._validationResults)) {
-      if (!validated.has(path)) delete this._validationResults[path]
+      if (!results.has(path)) delete this._validationResults[path]
     }
-    return valid
+    return [...results.values()].every((result) => result.valid)
   }
 
   getValidationResult(path: string): ValidationResult | undefined {
@@ -373,13 +347,7 @@ export class FormEngine {
   // validation evaluates it. Fields use this for their required marker, so
   // the marker never promises more, or less, than validation checks.
   isRequired(path: string): boolean {
-    const { wildcardPath, repeatContext } = this.resolvePathContext(path)
-    const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-    return (this.definition.validations?.[wildcardPath] ?? []).some(
-      (rule) =>
-        rule.type === 'required' &&
-        this._validationService.isActive(rule, scope, this._model, this.env),
-    )
+    return this._validator.isRequired(this._model, path, this.env)
   }
 
   localise(key: LocalisableString | undefined, repeatContext?: RepeatContext): string {
@@ -419,7 +387,7 @@ export class FormEngine {
     const segments = path.split('.')
     for (let length = segments.length - 1; length > 0; length--) {
       const group = segments.slice(0, length).join('.')
-      if (this.definition.validations?.[this.resolvePathContext(group).wildcardPath]) {
+      if (this._validator.hasRules(this._model, group)) {
         this.validatePath(group)
       }
     }
@@ -440,64 +408,7 @@ export class FormEngine {
     return position(a) - position(b) || a.localeCompare(b, undefined, { numeric: true })
   }
 
-  private getRowScope(repeatContext: RepeatContext): Record<string, unknown> {
-    const row = this.getValue(`${repeatContext.arrayPath}.${repeatContext.arrayIndex}`)
-    return row !== null && typeof row === 'object' ? (row as Record<string, unknown>) : {}
-  }
-
-  // Given a fully-resolved path (e.g. "items.2.quantity"), walks its segments
-  // against the live model to figure out which numeric segments are actually
-  // array indices (as opposed to, say, a literal object key that happens to
-  // be a digit string) — a segment counts only if the model value at its
-  // prefix is a real array. Building this from the model rather than from
-  // `definition.components` is what lets validation stay fully independent
-  // of the rendering schema.
   private resolvePathContext(path: string): PathContext {
-    const segments = path.split('.')
-    const repeatContexts: RepeatContext[] = []
-    let prefix = ''
-    const wildcardSegments = segments.map((segment) => {
-      const isArrayIndex = /^\d+$/.test(segment) && Array.isArray(this.getValue(prefix))
-      if (isArrayIndex) repeatContexts.push({ arrayPath: prefix, arrayIndex: Number(segment) })
-      prefix = prefix ? `${prefix}.${segment}` : segment
-      return isArrayIndex ? '*' : segment
-    })
-    return {
-      wildcardPath: wildcardSegments.join('.'),
-      repeatContext: repeatContexts.at(-1),
-      repeatContexts,
-    }
-  }
-
-  // The inverse of resolvePathContext: given a validations-dictionary key
-  // (with `*` for repeated segments), enumerates every concrete path it
-  // currently applies to by walking the live model — a `*` with no array at
-  // that position simply expands to nothing (that row/branch doesn't exist
-  // yet).
-  private expandWildcardPaths(
-    wildcardKey: string,
-  ): Array<{ path: string; repeatContext?: RepeatContext }> {
-    const segments = wildcardKey.split('.')
-    const results: Array<{ path: string; repeatContext?: RepeatContext }> = []
-
-    const walk = (index: number, currentPath: string, repeatContext: RepeatContext | undefined) => {
-      if (index === segments.length) {
-        results.push({ path: currentPath, repeatContext })
-        return
-      }
-      const segment = segments[index]!
-      if (segment === '*') {
-        const items = this.getValue(currentPath)
-        if (!Array.isArray(items)) return
-        items.forEach((_, arrayIndex) => {
-          walk(index + 1, `${currentPath}.${arrayIndex}`, { arrayPath: currentPath, arrayIndex })
-        })
-      } else {
-        walk(index + 1, currentPath ? `${currentPath}.${segment}` : segment, repeatContext)
-      }
-    }
-    walk(0, '', undefined)
-
-    return results
+    return resolvePathContext(this._model, path)
   }
 }

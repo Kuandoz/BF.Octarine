@@ -27,8 +27,10 @@ preferred.
 
 ## Where things stand
 
-`@octarine/form-engine` holds the headless engine: model, validation, conditions, localisation,
-lists and the recursive renderer. It came from the earlier formrenderer, without the old legacy
+The forms are three packages: `@octarine/form-abstractions` (types and interfaces only),
+`@octarine/form-core` (the rules: validation, conditions, expressions, paths, lists; no Vue) and
+`@octarine/form-engine` (the Vue side: reactive state, touched/submitted, error messages, the
+renderer and composables). The engine came from the earlier formrenderer, without the old legacy
 import/bridge code and without the builder. There are no concrete field components yet.
 
 Done so far:
@@ -53,11 +55,15 @@ Done so far:
 - Rule conditions get the same `env` as `hide` (they didn't before).
 - A value change re-runs every rule, so rules that depend on another field (required-if, compare)
   stay up to date after a submit.
+- The split (step 2): `form-abstractions` and `form-core` exist; the engine calls form-core's
+  `FormValidator` over its reactive model; errors are message keys with parameters, put into words
+  only by `getError`; `validateSubmission` and a local `SubmissionValidator` check a submitted
+  model the way the browser does.
 - Storybook has a **Forms/Form engine** page with stories (contact form, prefilled, repeat, two
   forms) built on demo field components in `apps/storybook/src/forms/form-engine/`. They are the
   first draft of the `@octarine/forms` field shells (step 6).
 
-## Package layers (planned)
+## Package layers
 
 ```
 form-abstractions  types and interfaces only, no runtime code (+ the JSON schema, as data)
@@ -66,8 +72,8 @@ form-core          validation runtime: no Vue, no DOM; runs in Node and in the b
        ↓
 form-engine        Vue: reactive state, touched/submitted, renderer, composables (headless)
        ↓
-forms              Octarine controls wired to the engine
-form-editor, apps/form-builder, the Node form service
+forms              Octarine controls wired to the engine (planned)
+form-editor, apps/form-builder, the Node form service (planned)
 ```
 
 - **`form-abstractions`**: `FormDefinition`, `FieldDefinition`, `ValidationRule`,
@@ -75,10 +81,11 @@ form-editor, apps/form-builder, the Node form service
   implement: `ExpressionLanguage`, `Validator`, `SubmissionValidator`, `TranslationProvider`,
   `ListProvider`. A FEEL package, a custom-validator package or a remote client depends only on this.
 - **`form-core`**: path helpers, `items.*` expansion, visibility, required-if, expressions,
-  validators, lists, defaults and constants. One pure entry point, roughly
-  `validateSubmission(definition, model, { validators, functions, lists, env })` →
-  `{ valid, errors: [{ path, rule, key, params }] }`. Errors are message keys with parameters, so
-  the server can translate them or hand them back for the client to translate.
+  validators, lists and messages. `validateSubmission(definition, model, { validators, functions,
+expressionLanguages, env })` → `{ valid, errors: [{ path, rule, key, params, message? }] }`.
+  Errors are message keys with parameters, so the server can translate them or hand them back for
+  the client to translate. Defaults and constants are still seeded by the engine (`mergeDeep`);
+  the server's handling of constants is in the server-side rules below.
 - **`form-engine`** becomes a thin Vue layer over `form-core`. Vue tracks reads of reactive objects
   inside plain functions, so the engine calls the same core functions inside computeds; there is no
   second implementation to drift.
@@ -121,12 +128,27 @@ Abstractions that keep the "where does it run" choice open:
   its field is shown pairs `hide` with a required-if (`condition`). That's the form designer's
   call, not the engine's.
 
+- **Disabled and read-only fields** are validated like any other, on both sides. In the browser
+  their errors are **not shown**: the person can't change the value, so marking it invalid only
+  blocks them. The server doesn't trust their values (see server-side rules).
+- **Custom components** (step 9) can be built by **both** developers and form authors, and must be
+  easy for someone with a basic understanding of HTML, JS and Tailwind.
+- `ValidatorResult` is `{ valid, key?, params? }`, so `{ valid: value !== '' }` is a whole
+  validator; a missing key falls back to the generic "isn't valid" message.
+- `validateSubmission` declares every field the form defines on a copy of the model, as the engine
+  does on load, so a key the client left out reads as `undefined` instead of keeping a required-if
+  active.
+
 ## Open decisions
 
-- **Disabled and read-only fields** are validated (as today, for the same reason as hidden ones).
-  Open: can the server trust their values, since the client can send anything for them? (See
-  server-side rules below.)
-- **Custom components** (step 9): developer components, author-built reusable parts, or both.
+- **A failed rule on a disabled or read-only field** blocks nothing in the browser, since it isn't
+  shown, so the submit goes through and the server rejects it. Should the form say something
+  (a general "this form can't be sent, contact …" message) instead?
+- **Author-built components with HTML and JS** (step 9): code written by one user runs in other
+  users' browsers, which is a security boundary. Options: a template language with no script
+  (HTML + Tailwind classes + the form's own expressions), or real JS in a sandboxed iframe. Tailwind
+  classes an author types at runtime also aren't in the built CSS, so they need a safelist or a
+  runtime Tailwind.
 
 ## Next steps, in order
 
@@ -141,16 +163,15 @@ All items done. Left over, for later steps:
 - [ ] After Remove, focus has to go somewhere sensible (the next row, or the Add button); that's
       the repeat component's job in step 6.
 
-### 2. Split `form-abstractions` and `form-core` out of `form-engine`
+### 2. Split `form-abstractions` and `form-core` out of `form-engine` (done)
 
-- [ ] Move types and interfaces to `form-abstractions` (types only; a test checks the built output
-      has no runtime code).
-- [ ] Move validation, conditions, expressions, paths, lists, defaults/constants to `form-core`
-      (no Vue import; a test checks this). Expose `validateSubmission`.
-- [ ] `form-engine` keeps the Vue state (touched, submitted, dirty, reactive results) and the
-      renderer, and calls `form-core`.
-- [ ] Error format with keys and parameters; translation happens at the edge.
-- [ ] `SubmissionValidator` interface with the local implementation.
+All items done. Left over, for later steps:
+
+- [ ] Message keys still start with `formRenderer.validation.`; flat keys come with step 4.
+- [ ] Global registries (`registerValidator`) live in form-core as module state until
+      `createForms` (step 3) replaces them.
+- [ ] `FormEngine.spec.ts` and `expressions.spec.ts` still test some rules through the engine;
+      move pure ones to form-core when touching them.
 
 ### 3. Engine API redesign
 
@@ -226,9 +247,9 @@ every theme), then add its `defineField` in `@octarine/forms`.
 
 - [ ] **Developers** register their own Vue component with `defineField`; the editor and builder
       pick it up from its schema. Easy once steps 3 and 6 exist.
-- [ ] **Form authors without code** build reusable parts (a person block, an address block) in JSON,
-      with parameters. Safe, fits the schema.
-- Author-supplied _code_ would be a security boundary (sandboxed iframe); not planned.
+- [ ] **Form authors** build reusable parts (a person block, an address block) with parameters. The
+      bar: someone with a basic understanding of HTML, JS and Tailwind can make one. How their
+      HTML and JS run safely is an open decision (above).
 
 ### 10. Node form service
 
@@ -250,8 +271,9 @@ client.
    `version`, and a submission is checked against the version it was filled in on.
 2. **Drop or reject values the form doesn't define**, so a submission can't add fields to the
    model that the form never asked for.
-3. **Values the user couldn't edit**: constants must equal the server's values. Disabled and
-   read-only fields need a decision (see open decisions): the client can send anything for them.
+3. **Values the user couldn't edit** aren't trusted: constants must equal the server's values, and
+   for disabled and read-only fields the server uses the value it knows (stored, prefilled or
+   computed) and rejects a different one. The client can send anything for them.
 4. **Same clock and timezone on both sides.** `age()`, `today+1` and `now` depend on them, so
    `now` and the timezone go into `env`; otherwise the client and the server disagree around
    midnight.

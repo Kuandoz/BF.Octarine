@@ -101,7 +101,15 @@ const preview: Preview = {
         order: [
           'Introduction',
           'Packages',
-          ['Tokens', 'Tailwind', 'Icons', 'Vue components', 'Form engine'],
+          [
+            'Tokens',
+            'Tailwind',
+            'Icons',
+            'Vue components',
+            'Form abstractions',
+            'Form core',
+            'Form engine',
+          ],
           'Foundations',
           'Actions',
           'Forms',

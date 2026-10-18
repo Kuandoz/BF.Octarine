@@ -1,10 +1,11 @@
-import {
-  type CompiledExpression,
-  type ExpressionFunction,
-  type ExpressionLanguage,
-} from './expressions'
+import type {
+  CompiledExpression,
+  ConditionValue,
+  ExpressionFunction,
+  ExpressionLanguage,
+} from '@octarine/form-abstractions'
+
 import { jsLanguage } from './jsLanguage'
-import type { ConditionValue } from './types'
 import { warnOnce } from './warn'
 
 export interface ExpressionContext {

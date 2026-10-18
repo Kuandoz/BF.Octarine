@@ -1,12 +1,14 @@
 # @octarine/form-engine
 
-See the [repo root README](../../README.md) for install/quickstart. This doc
-covers the package's API in depth.
-
-Headless engine for rendering a form from a JSON definition. It owns the reactive
-model, validation, and the recursive rendering pipeline — it ships with **no
-concrete field components**. Those come from [`@octarine/forms`](../forms) (planned) or
+Headless Vue engine for rendering a form from a JSON definition. It owns the reactive
+model, what was touched and submitted, error messages, and the recursive rendering pipeline; the
+rules themselves run in [`@octarine/form-core`](../form-core), the same code the server runs.
+It ships with **no concrete field components**: those come from [`@octarine/forms`](../forms) (planned) or
 from your own components, wired in as described below.
+
+Everything form-core and [`@octarine/form-abstractions`](../form-abstractions) export (the
+types, `validateSubmission`, `registerValidator`, `jsLanguage`, …) is exported from here too, so an
+app needs only this package.
 
 ## Quick start
 
@@ -351,49 +353,54 @@ concrete array index becomes a `*` wildcard instead, e.g.
 [Repeated items](#repeated-items) for how that's resolved against the live
 model).
 
-`FormEngine` delegates to a `ValidationService` (also exported, independently
-usable) that runs a path's rules in order and stops at the first failure — it
-has no built-in knowledge of what `"required"` or `"minLength"` mean, it just
-looks the `type` up in a validator registry:
+The rules run in [`@octarine/form-core`](../form-core), which has no Vue, so the
+server runs exactly the same checks with `validateSubmission`. The engine calls
+form-core's `FormValidator` over its reactive model and keeps the results. A
+path's rules run in order and stop at the first failure. form-core has no
+built-in knowledge of what `"required"` or `"minLength"` mean; it looks the
+`type` up in a validator registry:
 
 ```ts
 export interface ValidatorContext {
   value: unknown
   rule: ValidationRule
   path: string // the resolved model path being validated — not a FieldDefinition
-  translate: TranslationProvider['t']
   isEmpty: boolean
+  scope: Record<string, unknown> // the row inside a repeat, else the model
 }
 
-export type Validator = (context: ValidatorContext) => ValidationResult
+export interface ValidatorResult {
+  valid: boolean
+  key?: string // the message key; the generic "isn't valid" one when left out
+  params?: Record<string, unknown> // fills in the message: { min: 3 }
+}
+
+export type Validator = (context: ValidatorContext) => ValidatorResult
 ```
 
 Everything a validator could need is bundled into one context object rather
-than a fixed positional argument list, so adding something new later (e.g. the
-whole `FormEngine`) doesn't change every existing validator's signature. Note
-there's deliberately no `field` here — a validator that needed to know about a
-specific rendered component would be leaking a rendering concern into a model
-concern; a rule's own parameters (like `minLength`'s `value` above) belong on
-the rule, not on whatever field happens to render that path.
+than a fixed positional argument list, so adding something new later doesn't
+change every existing validator's signature. Note there's deliberately no
+`field` here — a validator that needed to know about a specific rendered
+component would be leaking a rendering concern into a model concern; a rule's
+own parameters (like `minLength`'s `value` above) belong on the rule, not on
+whatever field happens to render that path.
 
-Only `required` ships built in. Add your own the same way you'd register a
-component — note `translate`: **validators must never hardcode user-facing
-message text**, they resolve it through `translate(key, params?)` so it stays
-localizable. Also note `isEmpty`: **most rules should pass when the value is
-empty** — that's what `required` is for, and repeating an empty-value check in
-every rule would be redundant and inconsistent (`isEmpty` handles arrays,
-booleans, dates, and numbers correctly, not just `""`/`null`/`undefined`):
+**A validator returns a message key, never text.** The result
+(`{ valid: false, rule, key, params }`) is what the server sends back too;
+text is made where it is shown, in the reader's language. Also note `isEmpty`:
+**most rules should pass when the value is empty** — that's what `required` is
+for (`isEmpty` handles arrays, booleans, dates, and numbers correctly, not just
+`""`/`null`/`undefined`):
 
 ```ts
 import { registerValidator } from '@octarine/form-engine'
 
-registerValidator('minLength', ({ value, rule, isEmpty, translate }) => {
+registerValidator('minLength', ({ value, rule, isEmpty }) => {
   if (isEmpty) return { valid: true }
   const min = rule.value as number
   const ok = typeof value === 'string' && value.length >= min
-  return ok
-    ? { valid: true }
-    : { valid: false, message: translate('myApp.validation.minLength', { min }) }
+  return ok ? { valid: true } : { valid: false, key: 'myApp.validation.minLength', params: { min } }
 })
 ```
 
@@ -406,33 +413,31 @@ when empty," wrap the validator instead of repeating the check:
 import { registerValidator, skipWhenEmpty } from '@octarine/form-engine'
 
 registerValidator(
-  'minLength',
-  skipWhenEmpty(({ value, rule, translate }) => {
-    const min = rule.value as number
-    const ok = typeof value === 'string' && value.length >= min
-    return ok
-      ? { valid: true }
-      : { valid: false, message: translate('myApp.validation.minLength', { min }) }
-  }),
+  'even',
+  skipWhenEmpty(({ value }) => ({ valid: Number(value) % 2 === 0, key: 'myApp.validation.even' })),
 )
 ```
 
-By default `translate` is `defaultTranslationProvider`, which ships a small
-built-in English catalog for this package's own keys (currently just
-`formRenderer.validation.required`) and otherwise echoes the key back
-unresolved. A host app replaces it with a real integration (e.g. bridging to
-vue-i18n) via `provideFormRendererServices({ translationProvider })` —
+A validator the server doesn't know lets anything through there, so register
+custom validators in a module that the app and the server both import.
+
+`engine.getError(path)` puts a result into words with the `TranslationProvider`.
+By default that is `defaultTranslationProvider`, which ships English text for
+the built-in validators' keys (`formRenderer.validation.required`, …) and
+otherwise echoes the key back. A host app replaces it with a real integration
+(e.g. bridging to vue-i18n) via `provideFormRendererServices({ translationProvider })` —
 `FormRenderer.vue` picks that up automatically through `useTranslation()` and
 threads it into any `FormEngine` it constructs from a `definition` prop. If
 you construct your own `FormEngine` directly, pass the provider as the fourth
 constructor argument yourself.
 
-A rule can also carry its own `message`, which overrides the validator's
-default:
+A rule can also carry its own `message`, which wins over the validator's key.
+It is localised like a label: a key in the form's `localisations`, or literal
+text:
 
 ```ts
 validations: {
-  otherMunicipality: [{ type: 'required', message: 'Please fill this in.' }]
+  otherMunicipality: [{ type: 'required', message: 'Municipality.Required' }]
 }
 ```
 
@@ -445,7 +450,7 @@ new FormEngine(definition, model, {
   evenLength: ({ value, isEmpty }) =>
     isEmpty || (typeof value === 'string' && value.length % 2 === 0)
       ? { valid: true }
-      : { valid: false },
+      : { valid: false, key: 'myApp.validation.evenLength' },
 })
 ```
 
@@ -757,7 +762,7 @@ to pass them on correctly).
 Validation works the same way, but it's resolved differently — see
 [Validation](#validation): rules for a repeated field live at
 `definition.validations["items.*.quantity"]`, not on the field itself, and
-`FormEngine` expands that wildcard against the live model (checking which
+form-core's `FormValidator` expands that wildcard against the live model (checking which
 segments are genuinely array indices) rather than walking `components` at
 all. A `requiredIf`-style rule's own `condition` still sees the row, not the
 root model — `ValidationService.validate()` takes the same `scope`/

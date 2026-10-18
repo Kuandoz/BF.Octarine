@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ValidationRule } from './types'
+import type { ValidationRule } from '@octarine/form-abstractions'
 import {
   createValidatorContext,
   getGlobalValidatorRegistry,
@@ -18,43 +18,38 @@ function run(
   rule: Partial<ValidationRule> = {},
   scope: Record<string, unknown> = {},
 ) {
-  const context = createValidatorContext(value, { type, ...rule }, 'field', (key) => key, scope)
+  const context = createValidatorContext(value, { type, ...rule }, 'field', scope)
   return registry[type]!(context)
 }
 
 describe('createValidatorContext', () => {
   it('derives isEmpty from the given value rather than requiring it be set', () => {
-    const context = createValidatorContext('hello', { type: 'custom' }, 'someField', (key) => key)
+    const context = createValidatorContext('hello', { type: 'custom' }, 'someField')
     expect(context.isEmpty).toBe(false)
   })
 
   it('re-derives isEmpty if value is empty', () => {
-    const context = createValidatorContext('', { type: 'custom' }, 'someField', (key) => key)
+    const context = createValidatorContext('', { type: 'custom' }, 'someField')
     expect(context.isEmpty).toBe(true)
   })
 
   it('carries the resolved model path being validated', () => {
-    const context = createValidatorContext(
-      'hello',
-      { type: 'custom' },
-      'items.2.quantity',
-      (key) => key,
-    )
+    const context = createValidatorContext('hello', { type: 'custom' }, 'items.2.quantity')
     expect(context.path).toBe('items.2.quantity')
   })
 })
 
 describe('skipWhenEmpty', () => {
-  const wrapped = skipWhenEmpty(() => ({ valid: false, message: 'should not be reached' }))
+  const wrapped = skipWhenEmpty(() => ({ valid: false, key: 'unreachable' }))
 
   it('treats an empty value as valid without calling the wrapped validator', () => {
-    const context = createValidatorContext('', { type: 'custom' }, 'someField', (key) => key)
+    const context = createValidatorContext('', { type: 'custom' }, 'someField')
     expect(wrapped(context)).toEqual({ valid: true })
   })
 
   it('calls the wrapped validator when the value is not empty', () => {
-    const context = createValidatorContext('x', { type: 'custom' }, 'someField', (key) => key)
-    expect(wrapped(context)).toEqual({ valid: false, message: 'should not be reached' })
+    const context = createValidatorContext('x', { type: 'custom' }, 'someField')
+    expect(wrapped(context)).toEqual({ valid: false, key: 'unreachable' })
   })
 })
 
@@ -88,17 +83,12 @@ describe('global validator registry', () => {
 
   it('registerValidators adds a batch of validators', () => {
     registerValidators({
-      alwaysInvalid: () => ({ valid: false, message: 'nope' }),
+      alwaysInvalid: () => ({ valid: false, key: 'nope' }),
     })
-    const context = createValidatorContext(
-      undefined,
-      { type: 'alwaysInvalid' },
-      'someField',
-      (key) => key,
-    )
+    const context = createValidatorContext(undefined, { type: 'alwaysInvalid' }, 'someField')
     expect(getGlobalValidatorRegistry().alwaysInvalid!(context)).toEqual({
       valid: false,
-      message: 'nope',
+      key: 'nope',
     })
   })
 })

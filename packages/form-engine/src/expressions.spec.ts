@@ -5,11 +5,16 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import FormRenderer from './components/FormRenderer.vue'
-import { ExpressionService } from './ExpressionService'
-import { type ExpressionLanguage, ExpressionError, findExpressionLanguage } from './expressions'
+import {
+  ExpressionError,
+  ExpressionService,
+  findExpressionLanguage,
+  withExpressionLanguages,
+} from '@octarine/form-core'
+
 import { FormEngine } from './FormEngine'
-import { provideFormRendererServices, withExpressionLanguages } from './services'
-import type { FormDefinition } from './types'
+import { provideFormRendererServices } from './services'
+import type { ExpressionLanguage, FormDefinition } from './types'
 
 // A toy language: "field is value", "not field", or "fn(field)".
 const toy: ExpressionLanguage = {

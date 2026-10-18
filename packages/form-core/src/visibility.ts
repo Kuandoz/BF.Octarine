@@ -1,4 +1,4 @@
-import type { ConditionValue, FieldDefinition } from './types'
+import type { ConditionValue, FieldDefinition } from '@octarine/form-abstractions'
 
 /** A `hide` condition, and how many repeat rows deep it is evaluated (0: the whole model). */
 export interface HideCondition {

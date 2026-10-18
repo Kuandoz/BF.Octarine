@@ -11,7 +11,7 @@ import { useField } from '../composables/useField'
 import type { FormEngine } from '../FormEngine'
 import type { ComponentRegistry } from '../registry'
 import type { FieldDefinition, FormDefinition } from '../types'
-import type { ValidatorRegistry } from '../validators'
+import type { ValidatorRegistry } from '../types'
 
 // Two forms on one page that capture the same paths (two people, a billing
 // and a shipping address) must not share anything: model, errors, touched
@@ -257,13 +257,15 @@ describe('two forms on one page', () => {
     const { wrapper, a, b } = mountTwo(
       {
         definition: definition(),
-        validators: { neverValid: () => ({ valid: false, message: 'Never valid' }) },
+        validators: { neverValid: () => ({ valid: false }) },
       },
       { definition: definition() },
     )
 
     expect(a.engine.submit()).toBe(false)
-    expect(a.engine.getErrors()).toMatchObject([{ path: 'person.name', message: 'Never valid' }])
+    expect(a.engine.getErrors()).toMatchObject([
+      { path: 'person.name', message: "This value isn't valid." },
+    ])
     // An unknown rule type is skipped, so the other form stays valid.
     expect(b.engine.submit()).toBe(true)
     wrapper.unmount()

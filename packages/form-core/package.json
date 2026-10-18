@@ -1,0 +1,32 @@
+{
+  "name": "@octarine/form-core",
+  "version": "0.1.0",
+  "description": "The rules of Octarine's JSON forms: validation, conditions, expressions, paths and lists. No Vue and no DOM, so the same checks run in the browser and on the server.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@octarine/form-abstractions": "workspace:*",
+    "subscript": "^10.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}

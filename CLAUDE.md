@@ -10,7 +10,9 @@ full overview. Ongoing work on the JSON forms (status, decisions, next steps) is
 packages/tokens    → design tokens + themes (TS source of truth → tokens.css, themes/*.css, tokens.json)
 packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
 packages/icons     → icon data (Heroicons + octarine:*), SVG converter, Vite plugin (octarineIcons)
-packages/form-engine → headless JSON-form engine: model, validation, conditions, localisation, lists
+packages/form-abstractions → types and interfaces of the JSON forms only (no runtime code)
+packages/form-core → form rules: validation, conditions, expressions, paths, lists (no Vue, no DOM)
+packages/form-engine → headless Vue engine on form-core: reactive state, errors, renderer, composables
 packages/vue       → Vue components (one folder per component: .vue, .stories.ts, .spec.ts, index.ts)
 apps/storybook     → Storybook 10 (component stories + Foundations MDX pages)
 apps/playground    → demo app consuming the *built* packages
@@ -18,7 +20,9 @@ assets/brand       → Octarine logos (SVG)
 ```
 
 Each layer may only depend on the layers above it in this list; `icons` depends on nothing, and
-`form-engine` only on Vue (it has no styling).
+the form packages go `form-abstractions` → `form-core` → `form-engine`: abstractions has no runtime
+code, core runs in Node and the browser (no Vue, no DOM; specs check both), and only the engine uses
+Vue. None of them has styling.
 `tokens` and `icons` contain no Tailwind or Vue code. Components use no raw color values.
 
 ## Commands
@@ -28,7 +32,7 @@ pnpm may not be on PATH; prefix with `npx pnpm` if `pnpm` is not found.
 ```sh
 pnpm install
 pnpm build            # all packages (tokens → tailwind, icons → vue)
-pnpm build:foundation # tokens + tailwind + icons (needed after token or icon changes)
+pnpm build:foundation # tokens, tailwind, icons, form-abstractions, form-core (Storybook needs them built)
 pnpm test             # contrast spec (every theme × mode), icons + Vitest component specs
 pnpm typecheck
 pnpm storybook        # dev server on :6006

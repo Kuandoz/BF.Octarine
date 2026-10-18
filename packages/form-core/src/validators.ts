@@ -1,27 +1,12 @@
+import type {
+  ValidationRule,
+  Validator,
+  ValidatorContext,
+  ValidatorRegistry,
+  ValidatorResult,
+} from '@octarine/form-abstractions'
+
 import { getProperty } from './pathAccessors'
-import type { TranslationProvider } from './services'
-import type { ValidationResult, ValidationRule } from './types'
-
-export interface ValidatorContext {
-  value: unknown
-  rule: ValidationRule
-  // The resolved model path being validated (e.g. "items.2.quantity") — not
-  // a FieldDefinition. Validation is a model concern; nothing here should
-  // need to know about whatever component (if any) rendered this path.
-  path: string
-  translate: TranslationProvider['t']
-  /** Whether `value` counts as empty (see `isEmpty`). Most rules should pass when this is true — that's what `required` is for. */
-  isEmpty: boolean
-  // What an unqualified path in a cross-field rule (e.g. `compare`'s
-  // `rule.path`) resolves against — the current row's own fields inside a
-  // `repeat`, otherwise the whole model. Defaults to `{}` for validators
-  // constructed without one (most tests, most single-field validators).
-  scope: Record<string, unknown>
-}
-
-export type Validator = (context: ValidatorContext) => ValidationResult
-
-export type ValidatorRegistry = Record<string, Validator>
 
 export function isEmpty(value: unknown): boolean {
   // 1. Null or undefined are always considered empty
@@ -51,14 +36,12 @@ export function createValidatorContext(
   value: unknown,
   rule: ValidationRule,
   path: string,
-  translate: TranslationProvider['t'],
   scope: Record<string, unknown> = {},
 ): ValidatorContext {
   return {
     value,
     rule,
     path,
-    translate,
     scope,
     get isEmpty() {
       return isEmpty(value)
@@ -147,14 +130,14 @@ function resolveDateBound(input: unknown): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed
 }
 
-function validateDateRange(context: ValidatorContext, messageKey: string): ValidationResult {
-  const { value, rule, translate } = context
+function validateDateRange(context: ValidatorContext, messageKey: string): ValidatorResult {
+  const { value, rule } = context
   const date = resolveDateBound(value)
-  if (!date) return { valid: false, message: translate(messageKey) }
+  if (!date) return { valid: false, key: messageKey }
   const min = resolveDateBound(rule.min)
   const max = resolveDateBound(rule.max)
-  if (min && date.getTime() < min.getTime()) return { valid: false, message: translate(messageKey) }
-  if (max && date.getTime() > max.getTime()) return { valid: false, message: translate(messageKey) }
+  if (min && date.getTime() < min.getTime()) return { valid: false, key: messageKey }
+  if (max && date.getTime() > max.getTime()) return { valid: false, key: messageKey }
   return { valid: true }
 }
 
@@ -178,90 +161,84 @@ function compareValues(value: unknown, other: unknown, op: string): boolean {
 }
 
 const globalValidators: ValidatorRegistry = {
-  required: ({ isEmpty: empty, translate }) =>
-    empty
-      ? { valid: false, message: translate('formRenderer.validation.required') }
-      : { valid: true },
-  minLength: skipWhenEmpty(({ value, rule, translate }) => {
+  required: ({ isEmpty: empty }) =>
+    empty ? { valid: false, key: 'formRenderer.validation.required' } : { valid: true },
+  minLength: skipWhenEmpty(({ value, rule }) => {
     const min = Number(rule.value)
     return lengthOf(value) >= min
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.minLength', { min }) }
+      : { valid: false, key: 'formRenderer.validation.minLength', params: { min } }
   }),
-  maxLength: skipWhenEmpty(({ value, rule, translate }) => {
+  maxLength: skipWhenEmpty(({ value, rule }) => {
     const max = Number(rule.value)
     return lengthOf(value) <= max
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.maxLength', { max }) }
+      : { valid: false, key: 'formRenderer.validation.maxLength', params: { max } }
   }),
-  pattern: skipWhenEmpty(({ value, rule, translate }) => {
+  pattern: skipWhenEmpty(({ value, rule }) => {
     const isValid = new RegExp(String(rule.value)).test(String(value))
-    return isValid
-      ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.pattern') }
+    return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.pattern' }
   }),
-  email: skipWhenEmpty(({ value, translate }) =>
+  email: skipWhenEmpty(({ value }) =>
     EMAIL_PATTERN.test(String(value))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.email') },
+      : { valid: false, key: 'formRenderer.validation.email' },
   ),
-  phone: skipWhenEmpty(({ value, translate }) =>
+  phone: skipWhenEmpty(({ value }) =>
     PHONE_PATTERN.test(String(value).trim())
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.phone') },
+      : { valid: false, key: 'formRenderer.validation.phone' },
   ),
-  numeric: skipWhenEmpty(({ value, translate }) =>
+  numeric: skipWhenEmpty(({ value }) =>
     NUMERIC_PATTERN.test(String(value))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.numeric') },
+      : { valid: false, key: 'formRenderer.validation.numeric' },
   ),
-  decimal: skipWhenEmpty(({ value, translate }) =>
+  decimal: skipWhenEmpty(({ value }) =>
     DECIMAL_PATTERN.test(String(value))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.decimal') },
+      : { valid: false, key: 'formRenderer.validation.decimal' },
   ),
-  bool: skipWhenEmpty(({ value, translate }) =>
+  bool: skipWhenEmpty(({ value }) =>
     typeof value === 'boolean'
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.bool') },
+      : { valid: false, key: 'formRenderer.validation.bool' },
   ),
-  insz: skipWhenEmpty(({ value, translate }) =>
+  insz: skipWhenEmpty(({ value }) =>
     isValidInsz(String(value))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.insz') },
+      : { valid: false, key: 'formRenderer.validation.insz' },
   ),
-  iban: skipWhenEmpty(({ value, translate }) =>
+  iban: skipWhenEmpty(({ value }) =>
     isValidIban(String(value))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.iban') },
+      : { valid: false, key: 'formRenderer.validation.iban' },
   ),
-  oneOf: skipWhenEmpty(({ value, rule, translate }) => {
+  oneOf: skipWhenEmpty(({ value, rule }) => {
     const allowed = Array.isArray(rule.values) ? rule.values : []
     return allowed.includes(value)
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.oneOf') }
+      : { valid: false, key: 'formRenderer.validation.oneOf' }
   }),
   // A single value or an array of values, every one of which must appear in
   // `rule.values` — the array case is what distinguishes this from `oneOf`
   // (e.g. a set of checkboxes that must all come from an allowed set).
-  flags: skipWhenEmpty(({ value, rule, translate }) => {
+  flags: skipWhenEmpty(({ value, rule }) => {
     const ignoreCase = !!rule.ignoreCase
     const normalize = (item: unknown) => (ignoreCase ? String(item).toLowerCase() : String(item))
     const allowed = (Array.isArray(rule.values) ? rule.values : []).map(normalize)
     const items = Array.isArray(value) ? value : [value]
     return items.every((item) => allowed.includes(normalize(item)))
       ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.flags') }
+      : { valid: false, key: 'formRenderer.validation.flags' }
   }),
   // Cross-field comparison: against another path's live value (`rule.path`,
   // resolved in the current row's scope) if given, else a literal
   // `rule.value`. `op` is one of eq/ne/gt/ge/lt/le.
-  compare: skipWhenEmpty(({ value, rule, scope, translate }) => {
+  compare: skipWhenEmpty(({ value, rule, scope }) => {
     const other = rule.path !== undefined ? getProperty(scope, String(rule.path)) : rule.value
     const isValid = compareValues(value, other, String(rule.op ?? 'eq'))
-    return isValid
-      ? { valid: true }
-      : { valid: false, message: translate('formRenderer.validation.compare') }
+    return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.compare' }
   }),
   date: skipWhenEmpty((context) => validateDateRange(context, 'formRenderer.validation.date')),
   datetime: skipWhenEmpty((context) =>

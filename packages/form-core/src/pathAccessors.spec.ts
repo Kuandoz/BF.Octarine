@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { declareFieldKeys, resolveFieldPath } from './pathAccessors'
-import type { FieldDefinition } from './types'
+import type { FieldDefinition } from '@octarine/form-abstractions'
 
 describe('resolveFieldPath', () => {
   it("returns the field's own path unchanged with no repeat context", () => {

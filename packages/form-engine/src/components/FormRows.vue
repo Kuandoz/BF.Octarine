@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { resolveFieldPath } from '@octarine/form-core'
+
 import FormComponent from './FormComponent.vue'
 import FormRow from './FormRow.vue'
 
 import { useFormEngine } from '../composables/useFormEngine'
 import { useRepeatContext } from '../composables/useRepeatContext'
-import { resolveFieldPath } from '../pathAccessors'
 import type { FieldDefinition } from '../types'
 
 // Renders the rows of a repeat field, each with its own row scope, so a

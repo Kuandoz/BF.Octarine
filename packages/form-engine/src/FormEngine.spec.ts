@@ -109,8 +109,8 @@ describe('FormEngine', () => {
       },
     }
     const engine = new FormEngine(withMessage)
-    engine.validateModel()
-    expect(engine.getValidationResult('nickname')?.message).toBe('Give yourself a nickname.')
+    engine.submit()
+    expect(engine.getError('nickname')).toBe('Give yourself a nickname.')
   })
 
   it('supports registering a custom validator per-instance', () => {
@@ -122,9 +122,7 @@ describe('FormEngine', () => {
       evenLength: ({ value, isEmpty }) => {
         if (isEmpty) return { valid: true }
         const length = typeof value === 'string' ? value.length : 0
-        return length % 2 === 0
-          ? { valid: true }
-          : { valid: false, message: 'Must have an even length.' }
+        return length % 2 === 0 ? { valid: true } : { valid: false, key: 'evenLength' }
       },
     })
 
@@ -141,11 +139,11 @@ describe('FormEngine', () => {
       validations: { code: [{ type: 'required' }, { type: 'evenLength' }] },
     }
     const engine = new FormEngine(withMultipleRules, undefined, {
-      evenLength: () => ({ valid: false, message: 'Must have an even length.' }),
+      evenLength: () => ({ valid: false, key: 'evenLength' }),
     })
 
     engine.validateModel()
-    expect(engine.getValidationResult('code')?.message).toBe('This field is required.')
+    expect(engine.getValidationResult('code')).toMatchObject({ rule: 'required' })
   })
 
   it('skips an unregistered rule type instead of throwing', () => {
@@ -160,16 +158,51 @@ describe('FormEngine', () => {
 
   it('resolves the built-in required message through the default translation provider', () => {
     const engine = new FormEngine(definition)
-    engine.validateModel()
-    expect(engine.getValidationResult('firstName')?.message).toBe('This field is required.')
+    engine.submit()
+    expect(engine.getError('firstName')).toBe('This field is required.')
   })
 
   it('localizes validator messages via a custom translation provider', () => {
     const engine = new FormEngine(definition, undefined, undefined, {
       t: (key) => (key === 'formRenderer.validation.required' ? 'Dit veld is verplicht.' : key),
     })
-    engine.validateModel()
-    expect(engine.getValidationResult('firstName')?.message).toBe('Dit veld is verplicht.')
+    engine.submit()
+    expect(engine.getError('firstName')).toBe('Dit veld is verplicht.')
+  })
+
+  it('keeps results as keys and only puts them into words for getError', () => {
+    const withLength: FormDefinition = {
+      components: [{ type: 'text', path: 'code' }],
+      validations: { code: [{ type: 'minLength', value: 3 }] },
+    }
+    const engine = new FormEngine(withLength, { code: 'ab' }, undefined, {
+      t: (key, params) => `${key}:${JSON.stringify(params)}`,
+    })
+    engine.submit()
+    expect(engine.getValidationResult('code')).toEqual({
+      valid: false,
+      rule: 'minLength',
+      key: 'formRenderer.validation.minLength',
+      params: { min: 3 },
+    })
+    expect(engine.getError('code')).toBe('formRenderer.validation.minLength:{"min":3}')
+  })
+
+  it("localises a rule's own message through the form's localisations", () => {
+    const localised: FormDefinition = {
+      components: [{ type: 'text', path: 'nickname' }],
+      validations: { nickname: [{ type: 'required', message: 'Nickname.Required' }] },
+      localisations: {
+        default: 'en',
+        en: { Nickname: { Required: 'Give yourself a nickname.' } },
+        nl: { Nickname: { Required: 'Kies een bijnaam.' } },
+      },
+    }
+    const engine = new FormEngine(localised, undefined, undefined, undefined, 'nl')
+    engine.submit()
+    expect(engine.getError('nickname')).toBe('Kies een bijnaam.')
+    engine.setLocale('en')
+    expect(engine.getError('nickname')).toBe('Give yourself a nickname.')
   })
 
   it('reports whether a path is required', () => {

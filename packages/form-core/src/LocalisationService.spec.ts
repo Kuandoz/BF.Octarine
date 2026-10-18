@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { LocalisationService } from './LocalisationService'
-import type { FormLocalisations } from './types'
+import type { FormLocalisations } from '@octarine/form-abstractions'
 
 const localisations: FormLocalisations = {
   default: 'nl',

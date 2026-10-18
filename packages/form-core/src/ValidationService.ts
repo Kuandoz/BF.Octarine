@@ -1,36 +1,34 @@
-import { ExpressionService } from './ExpressionService'
-import { defaultTranslationProvider, type TranslationProvider } from './services'
-import type { ValidationResult, ValidationRule } from './types'
-import { warnOnce } from './warn'
-import {
-  createValidatorContext,
-  getGlobalValidatorRegistry,
-  type ValidatorRegistry,
-} from './validators'
+import type {
+  ValidationResult,
+  ValidationRule,
+  ValidatorRegistry,
+} from '@octarine/form-abstractions'
 
+import { ExpressionService } from './ExpressionService'
+import { INVALID_KEY } from './messages'
+import { createValidatorContext, getGlobalValidatorRegistry } from './validators'
+import { warnOnce } from './warn'
+
+// Runs the rules of one path. The result names the first rule that failed
+// by message key; turning it into text is up to whoever shows it.
 export class ValidationService {
   private validators: ValidatorRegistry
-  private translationProvider: TranslationProvider
   private expressionService: ExpressionService
 
   constructor(
     validators?: ValidatorRegistry,
-    translationProvider: TranslationProvider = defaultTranslationProvider,
     expressionService: ExpressionService = new ExpressionService(),
   ) {
     this.validators = validators
       ? { ...getGlobalValidatorRegistry(), ...validators }
       : getGlobalValidatorRegistry()
-    this.translationProvider = translationProvider
     this.expressionService = expressionService
   }
 
   // `scope` is what an unqualified `condition` expression sees — the current
   // row's own fields when validating something inside a `repeat`, otherwise
   // the whole model. `rootScope` (defaults to `scope`) backs a `root: true`
-  // condition's escape hatch back to the whole model. `rules` comes from
-  // FormEngine's own validations dictionary lookup — this service has no
-  // opinion on where they came from, only on running them.
+  // condition's escape hatch back to the whole model.
   validate(
     rules: ValidationRule[] | undefined,
     value: unknown,
@@ -48,9 +46,15 @@ export class ValidationService {
         continue
       }
 
-      const context = createValidatorContext(value, rule, path, this.translationProvider.t, scope)
-      const result = validator(context)
-      if (!result.valid) return { ...result, message: rule.message ?? result.message }
+      const result = validator(createValidatorContext(value, rule, path, scope))
+      if (result.valid) continue
+      return {
+        valid: false,
+        rule: rule.type,
+        key: result.key ?? INVALID_KEY,
+        ...(result.params && { params: result.params }),
+        ...(rule.message !== undefined && { message: rule.message }),
+      }
     }
     return { valid: true }
   }

@@ -1,4 +1,6 @@
-import { defaultListProvider, type ListProvider } from './services'
+import type { ListProvider } from '@octarine/form-abstractions'
+
+import { defaultListProvider } from './messages'
 
 export class ListService {
   private lists: Record<string, unknown[]>

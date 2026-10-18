@@ -1,0 +1,25 @@
+{
+  "name": "@octarine/form-abstractions",
+  "version": "0.1.0",
+  "description": "The types and interfaces of Octarine's JSON forms: form definitions, rules, errors, and the contracts other form packages implement. No runtime code.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

@@ -12,16 +12,19 @@ the parts that don't need a framework don't depend on one:
                                             ├──►  @octarine/vue  ──►  your app
 @octarine/icons  ───────────────────────────┘
 
-@octarine/form-engine   (Vue only, no styling)
+@octarine/form-abstractions  ──►  @octarine/form-core  ──►  @octarine/form-engine
+(types only)                       (rules, no Vue)            (Vue, no styling)
 ```
 
-| Package                 | What it does                                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `@octarine/tokens`      | Colors, typography, spacing, radius, shadows and component density, and the themes that fill them. |
-| `@octarine/tailwind`    | Turns the tokens into a Tailwind theme, with text styles and shared utilities.                     |
-| `@octarine/icons`       | Heroicons and Octarine's own icons as data, and a Vite plugin that bundles only what you use.      |
-| `@octarine/vue`         | The components.                                                                                    |
-| `@octarine/form-engine` | Renders forms from a JSON definition: values, validation, conditions, lists and languages.         |
+| Package                       | What it does                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@octarine/tokens`            | Colors, typography, spacing, radius, shadows and component density, and the themes that fill them. |
+| `@octarine/tailwind`          | Turns the tokens into a Tailwind theme, with text styles and shared utilities.                     |
+| `@octarine/icons`             | Heroicons and Octarine's own icons as data, and a Vite plugin that bundles only what you use.      |
+| `@octarine/vue`               | The components.                                                                                    |
+| `@octarine/form-abstractions` | The types of the JSON forms, with no runtime code.                                                 |
+| `@octarine/form-core`         | The form rules, without Vue, so the server checks submissions with the same code.                  |
+| `@octarine/form-engine`       | Renders forms from a JSON definition: values, validation, conditions, lists and languages.         |
 
 Each package's README is under **Packages** in the sidebar.
 

@@ -9,7 +9,7 @@ import { clonePlain } from '../mergeDeep'
 import { type ComponentRegistry, getGlobalRegistry, REGISTRY_KEY } from '../registry'
 import { useExpressionLanguages, useListProvider, useTranslation } from '../services'
 import type { FormDefinition, FormError } from '../types'
-import type { ValidatorRegistry } from '../validators'
+import type { ValidatorRegistry } from '../types'
 
 const props = defineProps<{
   definition?: FormDefinition

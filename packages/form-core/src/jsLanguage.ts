@@ -1,6 +1,8 @@
 import { type AST, parse } from 'subscript/feature/justin.js'
 
-import { type EvaluationContext, type ExpressionLanguage, ExpressionError } from './expressions'
+import type { EvaluationContext, ExpressionLanguage } from '@octarine/form-abstractions'
+
+import { ExpressionError } from './expressions'
 
 // The built-in "js" language: JS expression syntax, for conditions.
 //

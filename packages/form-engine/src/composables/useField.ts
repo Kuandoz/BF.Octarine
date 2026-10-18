@@ -9,7 +9,8 @@ import {
   type WritableComputedRef,
 } from 'vue'
 
-import { resolveFieldPath } from '../pathAccessors'
+import { resolveFieldPath } from '@octarine/form-core'
+
 import type { FieldDefinition } from '../types'
 import { useFormEngine } from './useFormEngine'
 import { useRepeatContext } from './useRepeatContext'

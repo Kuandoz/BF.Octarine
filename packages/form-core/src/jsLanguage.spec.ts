@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { type EvaluationContext, ExpressionError } from './expressions'
+import type { EvaluationContext } from '@octarine/form-abstractions'
+
+import { ExpressionError } from './expressions'
 import { jsLanguage } from './jsLanguage'
 
 function run(

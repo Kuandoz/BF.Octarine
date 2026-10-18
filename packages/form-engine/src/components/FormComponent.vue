@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 
+import { warnOnce } from '@octarine/form-core'
+
 import { useFormEngine } from '../composables/useFormEngine'
 import { useRepeatContext } from '../composables/useRepeatContext'
 import { fieldWidth } from '../layout'
 import { getGlobalRegistry, REGISTRY_KEY } from '../registry'
 import type { FieldDefinition } from '../types'
-import { warnOnce } from '../warn'
 
 const props = defineProps<{
   components: FieldDefinition[]

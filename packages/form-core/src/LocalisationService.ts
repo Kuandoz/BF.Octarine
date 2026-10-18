@@ -1,6 +1,11 @@
+import type {
+  FormLocalisations,
+  LocalisationTable,
+  TranslationProvider,
+} from '@octarine/form-abstractions'
+
+import { defaultTranslationProvider } from './messages'
 import { getProperty } from './pathAccessors'
-import { defaultTranslationProvider, type TranslationProvider } from './services'
-import type { FormLocalisations, LocalisationTable } from './types'
 
 // Matches {{Key}} / {{Nested.Key}} — deliberately not the `|format` pipe
 // syntax the legacy `_forms` system supports; that's model-value
