@@ -333,6 +333,7 @@ export const hearth: Theme = {
     cardPadding: '1.5rem',
     borderWidth: '1.5px',
     buttonTransform: 'none',
+    buttonPressedTransform: 'scale(0.97)',
     buttonShadow: 'none',
     buttonSolidBorder: 'transparent',
     badgeTransform: 'none',

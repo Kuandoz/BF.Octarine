@@ -11,6 +11,9 @@ const button = cva(
     'focus-ring transition-standard inline-flex items-center justify-center gap-2',
     'theme-border rounded-control border-transparent text-label whitespace-nowrap select-none',
     '[text-transform:var(--oct-button-transform)]',
+    // Pressed: the theme's press transform, and the hover colour (below) so a
+    // tap on a touch screen, which has no hover, shows too.
+    'active:[transform:var(--oct-button-pressed-transform)] active:shadow-none',
     'disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none',
   ],
   {
@@ -43,54 +46,69 @@ const button = cva(
       {
         variant: 'solid',
         intent: 'primary',
-        class: 'bg-primary text-primary-fg hover:bg-primary-hover',
+        class: 'bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-hover',
       },
       {
         variant: 'solid',
         intent: 'neutral',
-        class: 'bg-neutral text-neutral-fg hover:bg-neutral-hover',
+        class: 'bg-neutral text-neutral-fg hover:bg-neutral-hover active:bg-neutral-hover',
       },
       {
         variant: 'solid',
         intent: 'danger',
-        class: 'bg-danger text-danger-fg hover:bg-danger-hover',
+        class: 'bg-danger text-danger-fg hover:bg-danger-hover active:bg-danger-hover',
       },
 
       {
         variant: 'soft',
         intent: 'primary',
-        class: 'bg-primary-subtle text-primary-subtle-fg hover:bg-primary-subtle/70',
+        class:
+          'bg-primary-subtle text-primary-subtle-fg hover:bg-primary-subtle/70 active:bg-primary-subtle/70',
       },
       {
         variant: 'soft',
         intent: 'neutral',
-        class: 'bg-neutral-subtle text-neutral-subtle-fg hover:bg-neutral-subtle/70',
+        class:
+          'bg-neutral-subtle text-neutral-subtle-fg hover:bg-neutral-subtle/70 active:bg-neutral-subtle/70',
       },
       {
         variant: 'soft',
         intent: 'danger',
-        class: 'bg-danger-subtle text-danger-subtle-fg hover:bg-danger-subtle/70',
+        class:
+          'bg-danger-subtle text-danger-subtle-fg hover:bg-danger-subtle/70 active:bg-danger-subtle/70',
       },
 
       {
         variant: 'outline',
         intent: 'primary',
-        class: 'border-primary text-primary hover:bg-primary-subtle',
+        class: 'border-primary text-primary hover:bg-primary-subtle active:bg-primary-subtle',
       },
       {
         variant: 'outline',
         intent: 'neutral',
-        class: 'border-border-strong text-fg hover:bg-surface-sunken',
+        class: 'border-border-strong text-fg hover:bg-surface-sunken active:bg-surface-sunken',
       },
       {
         variant: 'outline',
         intent: 'danger',
-        class: 'border-danger text-danger hover:bg-danger-subtle',
+        class: 'border-danger text-danger hover:bg-danger-subtle active:bg-danger-subtle',
       },
 
-      { variant: 'ghost', intent: 'primary', class: 'text-primary hover:bg-primary-subtle' },
-      { variant: 'ghost', intent: 'neutral', class: 'text-fg hover:bg-surface-sunken' },
-      { variant: 'ghost', intent: 'danger', class: 'text-danger hover:bg-danger-subtle' },
+      {
+        variant: 'ghost',
+        intent: 'primary',
+        class: 'text-primary hover:bg-primary-subtle active:bg-primary-subtle',
+      },
+      {
+        variant: 'ghost',
+        intent: 'neutral',
+        class: 'text-fg hover:bg-surface-sunken active:bg-surface-sunken',
+      },
+      {
+        variant: 'ghost',
+        intent: 'danger',
+        class: 'text-danger hover:bg-danger-subtle active:bg-danger-subtle',
+      },
     ],
   },
 )

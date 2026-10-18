@@ -333,6 +333,7 @@ export const vellum: Theme = {
     cardPadding: '1.75rem',
     borderWidth: '1px',
     buttonTransform: 'none',
+    buttonPressedTransform: 'translateY(1px)',
     buttonShadow: 'none',
     buttonSolidBorder: 'transparent',
     badgeTransform: 'uppercase',

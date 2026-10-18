@@ -327,6 +327,7 @@ export const prism: Theme = {
     cardPadding: '1.5rem',
     borderWidth: '2px',
     buttonTransform: 'uppercase',
+    buttonPressedTransform: 'translate(2px, 2px)',
     buttonShadow: 'xs',
     buttonSolidBorder: 'fg',
     badgeTransform: 'uppercase',

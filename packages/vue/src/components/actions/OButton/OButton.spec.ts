@@ -16,6 +16,21 @@ describe('OButton', () => {
     expect(wrapper.classes()).not.toContain('bg-primary')
   })
 
+  it.each([
+    ['solid', 'primary', 'active:bg-primary-hover'],
+    ['soft', 'danger', 'active:bg-danger-subtle/70'],
+    ['outline', 'neutral', 'active:bg-surface-sunken'],
+    ['ghost', 'primary', 'active:bg-primary-subtle'],
+  ] as const)(
+    'shows a %s %s button being pressed, also without hover',
+    (variant, intent, pressed) => {
+      const wrapper = mount(OButton, { props: { variant, intent } })
+      expect(wrapper.classes()).toEqual(
+        expect.arrayContaining([pressed, 'active:[transform:var(--oct-button-pressed-transform)]']),
+      )
+    },
+  )
+
   it('lets consumer classes override conflicting defaults', () => {
     const wrapper = mount(OButton, { attrs: { class: 'rounded-full' } })
     expect(wrapper.classes()).toContain('rounded-full')

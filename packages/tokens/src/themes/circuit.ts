@@ -333,6 +333,7 @@ export const circuit: Theme = {
     cardPadding: '1rem',
     borderWidth: '1px',
     buttonTransform: 'none',
+    buttonPressedTransform: 'translateY(1px)',
     buttonShadow: 'xs',
     buttonSolidBorder: 'transparent',
     badgeTransform: 'none',

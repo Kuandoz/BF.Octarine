@@ -58,6 +58,7 @@ function themeDecls(theme: Theme): string[] {
     decl('border-width', c.borderWidth),
     ...Object.entries(c.radius).map(([k, v]) => decl(`radius-${k}`, ref(`radius-${v}`))),
     decl('button-transform', c.buttonTransform),
+    decl('button-pressed-transform', c.buttonPressedTransform),
     decl('badge-transform', c.badgeTransform),
     decl('badge-tracking', c.badgeTracking),
     ...Object.entries(c.iconSize).map(([k, v]) => decl(`icon-size-${k}`, v)),

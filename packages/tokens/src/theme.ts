@@ -31,6 +31,8 @@ export type ComponentTokens = {
   borderWidth: string
   radius: Record<'control' | 'input' | 'card' | 'badge', RadiusName>
   buttonTransform: 'none' | 'uppercase'
+  /** A CSS transform for a button while it is pressed, so a click is felt (e.g. `translateY(1px)`). */
+  buttonPressedTransform: string
   buttonShadow: ShadowName | 'none'
   buttonSolidBorder: SemanticColorName | 'transparent'
   badgeTransform: 'none' | 'uppercase'

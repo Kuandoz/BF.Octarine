@@ -271,6 +271,7 @@ export const octarine: Theme = {
     borderWidth: '1px',
     radius: { control: 'md', input: 'md', card: 'xl', badge: 'full' },
     buttonTransform: 'none',
+    buttonPressedTransform: 'translateY(1px)',
     buttonShadow: 'none',
     buttonSolidBorder: 'transparent',
     badgeTransform: 'none',
