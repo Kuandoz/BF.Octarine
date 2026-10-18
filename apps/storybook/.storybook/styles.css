@@ -4,3 +4,12 @@
 /* Scan component sources directly so edits show up without rebuilding @octarine/vue. */
 @source '../../../packages/vue/src';
 @source '../src';
+
+/*
+ * Story previews on a docs page show Octarine's canvas in the toolbar's theme
+ * and mode, as a story on its own does, instead of Storybook's page colour.
+ */
+.sbdocs .docs-story {
+  background-color: var(--oct-color-canvas);
+  color: var(--oct-color-fg);
+}

@@ -1,11 +1,15 @@
 import { addons } from 'storybook/manager-api'
-import { create } from 'storybook/theming'
+import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events'
+import { managerThemes } from './themes'
 
-addons.setConfig({
-  theme: create({
-    base: 'light',
-    brandTitle: 'Octarine',
-    brandImage: './brand/octarine-logo-light.svg',
-    brandTarget: '_self',
-  }),
+addons.setConfig({ theme: managerThemes.light })
+
+// The sidebar and toolbar follow the Mode in the toolbar, like the stories.
+addons.register('octarine/mode', (api) => {
+  const follow = ({ globals }: { globals?: Record<string, unknown> }) => {
+    const dark = (globals ?? api.getGlobals())?.mode === 'dark'
+    api.setOptions({ theme: dark ? managerThemes.dark : managerThemes.light })
+  }
+  api.on(SET_GLOBALS, follow)
+  api.on(GLOBALS_UPDATED, follow)
 })

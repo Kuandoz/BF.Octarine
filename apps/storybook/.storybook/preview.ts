@@ -4,6 +4,7 @@ import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events'
 import { addons } from 'storybook/preview-api'
 import { createIcons } from '../../../packages/vue/src'
 import icons from 'virtual:octarine-icons'
+import { ThemedDocsContainer } from './docsContainer'
 import './styles.css'
 
 /** Adds a theme's web-font stylesheet to <head> once (mirrors useTheme()). */
@@ -96,6 +97,7 @@ const preview: Preview = {
     layout: 'padded',
     backgrounds: { disable: true },
     controls: { expanded: true },
+    docs: { container: ThemedDocsContainer },
     options: {
       storySort: {
         order: [
