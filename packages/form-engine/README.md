@@ -295,6 +295,14 @@ the errors in screen order. Attributes like `aria-label` or `class` go to the
 them; both get the `engine`. The component also exposes `engine` and
 `submit()`, for a button outside the form.
 
+**Unsaved changes.** `engine.dirty` tells whether the values differ from the
+pristine ones (what the form started with), `engine.isDirty(path)` the same for
+one path. Empty values (`''`, `[]`, `{}`) count as no value, so typing and
+clearing a field, or adding a row and removing it, is no change. After saving,
+`engine.markPristine()` makes the current values the pristine ones;
+`engine.reset()` goes back to them and hides errors again until the next blur
+or submit.
+
 For a quick form, `FormRenderer` also takes `definition`, `model` and `locale`
 props and calls `useForm` itself.
 

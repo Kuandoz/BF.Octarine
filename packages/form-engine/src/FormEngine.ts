@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue'
+import { reactive, ref, shallowRef } from 'vue'
 
 import {
   collectFields,
@@ -14,6 +14,7 @@ import {
   getProperty,
   type FieldCondition,
   INVALID_KEY,
+  isEmpty,
   ListService,
   LocalisationService,
   type PathContext,
@@ -23,7 +24,7 @@ import {
 } from '@octarine/form-core'
 
 import type { FieldType } from './fields'
-import { mergeDeep } from './mergeDeep'
+import { clonePlain, mergeDeep } from './mergeDeep'
 import type {
   ConditionValue,
   FieldDefinition,
@@ -35,6 +36,23 @@ import type {
   TranslationProvider,
   ValidationResult,
 } from './types'
+
+// What counts for dirty state: empty values ('', [], {}, null) are all the
+// same as no value, so typing text and clearing it, or adding a row and
+// removing it, is not a change.
+function contentOf(value: unknown): string {
+  const normalise = (item: unknown): unknown => {
+    if (isEmpty(item)) return undefined
+    if (Array.isArray(item)) return item.map(normalise)
+    if (item !== null && typeof item === 'object' && !(item instanceof Date)) {
+      const entries = Object.entries(item).map(([key, inner]) => [key, normalise(inner)] as const)
+      const kept = entries.filter(([, inner]) => inner !== undefined)
+      return kept.length ? Object.fromEntries(kept) : undefined
+    }
+    return item
+  }
+  return JSON.stringify(normalise(value) ?? null)
+}
 
 export interface FormEngineOptions extends FormValidatorOptions {
   // The values to start from. The engine works on a copy: this object is
@@ -62,7 +80,9 @@ export class FormEngine {
 
   private _model: Record<string, unknown>
   private _validationResults: Record<string, ValidationResult> = reactive({})
-  private _dirtyPaths = reactive(new Set<string>())
+  // The values `dirty` compares with: what the form started with, or what
+  // markPristine() saw last.
+  private _pristine = shallowRef<Record<string, unknown>>({})
   private _touchedPaths = reactive(new Set<string>())
   private _submitted = ref(false)
   private _translate: TranslationProvider['t']
@@ -113,6 +133,7 @@ export class FormEngine {
     mergeDeep(seeded, initialModel)
     declareFieldKeys(definition.components, seeded, repeatTypes)
     this._model = reactive(seeded)
+    this._pristine.value = clonePlain(seeded)
 
     this._validator = new FormValidator(definition, { ...rules, repeatTypes })
     this._localisationService = new LocalisationService(definition.localisations, locale, {
@@ -147,7 +168,6 @@ export class FormEngine {
 
   setValue(path: string, value: unknown): void {
     setProperty(this._model, path, value)
-    this._dirtyPaths.add(path)
     // Every rule runs again, not just those on `path`: a required-if or a
     // compare on another field can depend on this value. Errors still only
     // show for fields that were left, or after a submit.
@@ -159,8 +179,6 @@ export class FormEngine {
 
     const defaultValue = getProperty(this._defaults, path)
     if (defaultValue !== undefined) setProperty(this._model, path, defaultValue)
-
-    this._dirtyPaths.add(path)
   }
 
   // The user has left the field at `path`: validate it, and from now on
@@ -256,8 +274,38 @@ export class FormEngine {
     return field?.label === undefined ? '' : this.localise(field.label, repeatContext)
   }
 
-  isDirty(path: string): boolean {
-    return this._dirtyPaths.has(path)
+  // Whether the value at `path` (the whole form without one) differs from
+  // the pristine values: what the form started with, or what markPristine()
+  // saw last. Typing a value and changing it back is not a change.
+  isDirty(path?: string): boolean {
+    const now = path === undefined ? this._model : getProperty(this._model, path)
+    const then = path === undefined ? this._pristine.value : getProperty(this._pristine.value, path)
+    return contentOf(now) !== contentOf(then)
+  }
+
+  get dirty(): boolean {
+    return this.isDirty()
+  }
+
+  // The current values become the pristine ones, e.g. after they were saved:
+  // `dirty` is false again and reset() comes back here. Errors and touched
+  // fields stay as they are.
+  markPristine(): void {
+    this._pristine.value = clonePlain(this._model)
+  }
+
+  // Back to the pristine values, as if nothing was done since: no field is
+  // touched, the form isn't submitted, and errors are hidden until the next
+  // blur or submit.
+  reset(): void {
+    const pristine = clonePlain(this._pristine.value)
+    for (const key of Object.keys(this._model)) {
+      if (!(key in pristine)) delete this._model[key]
+    }
+    Object.assign(this._model, pristine)
+    this._touchedPaths.clear()
+    this._submitted.value = false
+    this.validateModel()
   }
 
   isConstant(path: string): boolean {
@@ -272,7 +320,6 @@ export class FormEngine {
   addRepeatItem(path: string, item: Record<string, unknown> = {}): void {
     const items = (this.getValue(path) as unknown[] | undefined) ?? []
     setProperty(this._model, path, [...items, item])
-    this._dirtyPaths.add(path)
     this.validateModel()
   }
 
@@ -283,7 +330,6 @@ export class FormEngine {
       path,
       items.filter((_, i) => i !== index),
     )
-    this._dirtyPaths.add(path)
     this.validateModel()
   }
 

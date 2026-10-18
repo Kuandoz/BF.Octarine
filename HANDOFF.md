@@ -184,7 +184,8 @@ All items done. Left over, for later steps:
 - [x] `useForm(definition, options)` with `<FormRenderer :form>`; `new FormEngine(definition, options)`
       instead of seven positional parameters.
 - [x] Explicit repeat scope instead of the `useFormEngine()` Proxy: calls take the row.
-- [ ] `reset()`, `markPristine()`, form-level dirty state.
+- [x] `reset()`, `markPristine()`, `dirty`/`isDirty(path)`, comparing values with the pristine
+      ones (empty values count as none).
 - [x] The app's `model` is never changed: the engine works on a copy (documented).
 - [x] mitt is gone; apps can `watch(engine.model)`.
 - [x] Configurable expression functions, added to `age()`.
