@@ -8,6 +8,49 @@ model, validation, and the recursive rendering pipeline — it ships with **no
 concrete field components**. Those come from [`@octarine/forms`](../forms) (planned) or
 from your own components, wired in as described below.
 
+## Quick start
+
+A form is JSON: the fields to show, and the rules for the values, kept apart.
+
+```ts
+import type { FormDefinition } from '@octarine/form-engine'
+
+export const contact: FormDefinition = {
+  components: [
+    { type: 'text', path: 'name', label: 'Name' },
+    { type: 'checkbox', path: 'wantsCall', label: 'Call me back' },
+    { type: 'text', path: 'phone', label: 'Phone', hide: 'wantsCall !== true' },
+  ],
+  validations: {
+    name: [{ type: 'required' }],
+    phone: [{ type: 'required', condition: 'wantsCall === true' }, { type: 'phone' }],
+  },
+}
+```
+
+Register a component for each `type` (see [`useField`](#usefield) for writing one), then render
+the form:
+
+```vue
+<script setup lang="ts">
+import { FormRenderer } from '@octarine/form-engine'
+import '@octarine/form-engine/layout.css'
+import { contact } from './contact'
+import { CheckboxField, TextField } from './fields'
+
+const fields = { text: TextField, checkbox: CheckboxField }
+</script>
+
+<template>
+  <FormRenderer :definition="contact" :components="fields" @submit="send">
+    <button type="submit">Send</button>
+  </FormRenderer>
+</template>
+```
+
+The engine has no styling and no field components of its own. Storybook's **Forms/Form engine**
+page shows it working with Octarine's components.
+
 ## The component contract
 
 Any component you want `FormRenderer` to be able to render must accept exactly
@@ -251,7 +294,9 @@ only appears once the user has left the field or tried to submit, so nobody is
 told "invalid email" after one letter. Fields call `engine.touch(path)` on blur
 and show `engine.getError(path)`; a submit button calls `engine.submit()`, which
 validates every visible field, shows all errors and returns whether the form can
-be sent. A shown error follows the value and disappears once it is fixed.
+be sent. A shown error follows the value and disappears once it is fixed. A change re-runs
+every rule, so a rule that depends on another field (a required-if, a `compare`) is never out of
+date.
 `getValidationResult(path)` still returns the raw result at any time.
 
 **Hidden fields are validated too.** A value can't slip through by hiding its

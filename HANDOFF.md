@@ -51,6 +51,11 @@ Done so far:
   language (`src/jsLanguage.ts`) uses subscript's parser with the engine's own evaluator;
   sandboxjs is gone. A form names its language in `definition.expressions`.
 - Rule conditions get the same `env` as `hide` (they didn't before).
+- A value change re-runs every rule, so rules that depend on another field (required-if, compare)
+  stay up to date after a submit.
+- Storybook has a **Forms/Form engine** page with stories (contact form, prefilled, repeat, two
+  forms) built on demo field components in `apps/storybook/src/forms/form-engine/`. They are the
+  first draft of the `@octarine/forms` field shells (step 6).
 
 ## Package layers (planned)
 
@@ -189,7 +194,13 @@ All items done. Left over, for later steps:
 These go back and forth, one control at a time: build it in `@octarine/vue` (story, spec, axe in
 every theme), then add its `defineField` in `@octarine/forms`.
 
-- [ ] Field shell on `useField` + `OField`, submit flow with `OErrorSummary`, `layout.css`.
+- [ ] Field shell on `useField` + `OField`, submit flow with `OErrorSummary`, `layout.css`. Start
+      from the Storybook demo fields (`apps/storybook/src/forms/form-engine/`).
+- [ ] `OForm` and `FormRenderer` both render a `<form>`, so they can't be nested: the demo shows
+      the required note itself. Let one of them render without a `<form>` (e.g. an `as` prop).
+- [ ] The demo checkbox is a native one: `@octarine/vue` has no checkbox yet.
+- [ ] The engine's validation messages are English only until step 4; the demo's labels follow
+      the page language, its errors don't yet.
 - [ ] Controls: Textarea, Select, Checkbox, Checkbox group, Radio group, Switch, Number, Date.
 - [ ] Harder ones: Combobox/autocomplete and file upload (full WAI-ARIA keyboard patterns).
 - [ ] Repeat component on `FormRows` with Add/Remove.

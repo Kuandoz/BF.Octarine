@@ -51,6 +51,8 @@ setup((app) => {
 })
 
 const preview: Preview = {
+  // Every component gets a docs page with its props, from its doc comments.
+  tags: ['autodocs'],
   decorators: [withTheme],
   globalTypes: {
     theme: {
@@ -95,7 +97,18 @@ const preview: Preview = {
     backgrounds: { disable: true },
     controls: { expanded: true },
     options: {
-      storySort: { order: ['Foundations', 'Actions', 'Forms', 'Feedback', 'Layout'] },
+      storySort: {
+        order: [
+          'Introduction',
+          'Packages',
+          ['Tokens', 'Tailwind', 'Icons', 'Vue components', 'Form engine'],
+          'Foundations',
+          'Actions',
+          'Forms',
+          'Feedback',
+          'Layout',
+        ],
+      },
     },
   },
 }

@@ -1,0 +1,96 @@
+import { Canvas, Meta, Source } from '@storybook/addon-docs/blocks'
+import * as Stories from './FormEngine.stories'
+import { contactForm, travellersForm } from './form-engine/definitions'
+
+<Meta of={Stories} />
+
+# Form engine
+
+`@octarine/form-engine` renders a form from a JSON definition. The people who build an
+application's forms write that JSON (or, later, use the builder); the engine turns it into a working
+form with validation, conditions, lists and labels in several languages.
+
+The engine is **headless**: it holds the values, the rules and the state, and has no styling and
+no field components of its own. The stories below register a small set built from Octarine's
+components (`OField`, `OInput`, `OFieldset`, `OErrorSummary`), the way the planned
+`@octarine/forms` package will.
+
+<Canvas of={Stories.Contact} />
+
+## A definition
+
+Fields describe what is shown; validations are rules about the values, kept apart and keyed by
+path. Text in `label` and `hint` is looked up in `localisations` for the current language.
+
+<Source language="json" code={JSON.stringify(contactForm(), null, 2)} />
+
+Things to try in the form above:
+
+- **Send it empty.** The error summary takes focus and links to each field. Errors also show once a
+  field is left, and disappear as soon as the value is right.
+- **Check "Call me back".** The phone number appears (`hide`) and becomes required (a rule with a
+  `condition`). A hidden field is still validated, so a form asks for a value only while it is
+  shown by pairing the two.
+- **Switch the language** in the toolbar. The form follows the page language (`<html lang>`) unless
+  it gets a `locale`; a `FormRenderer` keeps what was filled in when its `locale` changes.
+- **Narrow the window.** Half and third widths stack when the form is narrow.
+
+## Lists
+
+A `repeat` field renders its `components` once per row. Inside a row, conditions and paths refer
+to that row: `needsAssistance` is this traveller's checkbox, and the rules for every row are written
+once, as `travellers.*.name`.
+
+<Canvas of={Stories.Repeat} />
+
+<Source language="json" code={JSON.stringify(travellersForm(), null, 2)} />
+
+## Two forms on one page
+
+Two forms can capture the same paths without sharing anything: each field gets its own id from
+Vue's `useId()`, and each form's error summary links to its own fields.
+
+<Canvas of={Stories.TwoForms} />
+
+## Writing a field component
+
+A component is registered under the `type` a definition uses, gets the field's JSON as its one
+prop, and takes everything else from `useField`:
+
+```vue
+<script setup lang="ts">
+import { type FieldDefinition, useField } from '@octarine/form-engine'
+import { OField, OInput } from '@octarine/vue'
+
+const props = defineProps<{ field: FieldDefinition }>()
+const { id, value, label, hint, required, disabled, readonly, error, onBlur } = useField<string>(
+  () => props.field,
+)
+</script>
+
+<template>
+  <OField
+    :id="id"
+    :label="label"
+    :hint="hint"
+    :error="error"
+    :required="required"
+    :disabled="disabled"
+  >
+    <OInput v-model="value" :readonly="readonly" @blur="onBlur" />
+  </OField>
+</template>
+```
+
+The package README (under **Packages**) describes the whole API: validation, expressions,
+localisation, lists, defaults and constants.
+
+## Accessibility
+
+- Every field has a label and an id of its own; hints and errors are linked through `OField`.
+- Errors show as text, after the field was left or the form was sent, never while typing the first
+  character.
+- After a failed submit the error summary takes focus, and each entry moves focus to its field. An
+  error on a hidden field names the field instead of linking to it.
+- Adding a row moves focus into it; removing one moves focus to the next row, or the Add button.
+- The required note explains the `*`.

@@ -20,11 +20,14 @@ Each layer depends only on the layers to its left. `@octarine/icons` depends on 
 | [`@octarine/icons`](packages/icons)             | Icons as plain data: the [Heroicons](https://heroicons.com) set (MIT) in four variants, Octarine's own icons (`octarine:*`) and a **Vite plugin** that bundles only the icons the source uses. No framework code.                                                               |
 | [`@octarine/form-engine`](packages/form-engine) | Renders forms from a JSON definition: reactive model, validation, expression-based conditions, localisation and lists. Headless: field components register themselves by `type`.                                                                                                |
 | [`@octarine/vue`](packages/vue)                 | Vue components styled only with theme utilities. Each component lives in its own folder with its story and tests.                                                                                                                                                               |
-| [`apps/storybook`](apps/storybook)              | Component explorer, plus Foundations pages (colors, typography, spacing) generated from the tokens.                                                                                                                                                                             |
+| [`apps/storybook`](apps/storybook)              | Component explorer and documentation: an introduction, every package's README, Foundations pages generated from the tokens, a docs page per component, and the form engine rendering JSON forms.                                                                                |
 | [`apps/playground`](apps/playground)            | A small app that uses the _built_ packages the way an external project would.                                                                                                                                                                                                   |
 | [`assets/brand`](assets/brand)                  | Octarine logos and mark (SVG).                                                                                                                                                                                                                                                  |
 
 ## Getting started
+
+Every package and app has a `README.md` saying what it does and how to use it. Storybook shows the
+same READMEs under **Packages**, next to the component docs.
 
 New here? [QUICKSTART.md](QUICKSTART.md) walks you from install to a first screen in your own app.
 

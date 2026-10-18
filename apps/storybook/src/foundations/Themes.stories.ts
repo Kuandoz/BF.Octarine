@@ -17,6 +17,8 @@ import {
  */
 const meta = {
   title: 'Foundations/Themes',
+  // A gallery, not a component: no props page.
+  tags: ['!autodocs'],
   parameters: { layout: 'fullscreen' },
   render: () => ({
     components: { OBadge, OButton, OCard, OField, OHeading, OInput, OStack, OText },

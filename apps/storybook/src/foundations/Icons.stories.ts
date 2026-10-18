@@ -22,6 +22,8 @@ const sizes: Record<IconVariant, 'sm' | 'md' | 'lg'> = {
  */
 const meta = {
   title: 'Foundations/Icons',
+  // A gallery, not a component: no props page.
+  tags: ['!autodocs'],
   parameters: { layout: 'padded' },
   render: () => ({
     components: { OField, OIcon, OInput },

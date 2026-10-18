@@ -1,0 +1,97 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Introduction" />
+
+# Octarine
+
+Octarine is a design system for Vue 3 and Tailwind CSS v4. It is split into layered packages, so
+the parts that don't need a framework don't depend on one:
+
+```
+@octarine/tokens  ──►  @octarine/tailwind  ──┐
+                                            ├──►  @octarine/vue  ──►  your app
+@octarine/icons  ───────────────────────────┘
+
+@octarine/form-engine   (Vue only, no styling)
+```
+
+| Package                 | What it does                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `@octarine/tokens`      | Colors, typography, spacing, radius, shadows and component density, and the themes that fill them. |
+| `@octarine/tailwind`    | Turns the tokens into a Tailwind theme, with text styles and shared utilities.                     |
+| `@octarine/icons`       | Heroicons and Octarine's own icons as data, and a Vite plugin that bundles only what you use.      |
+| `@octarine/vue`         | The components.                                                                                    |
+| `@octarine/form-engine` | Renders forms from a JSON definition: values, validation, conditions, lists and languages.         |
+
+Each package's README is under **Packages** in the sidebar.
+
+## Finding your way
+
+- **Foundations**: the tokens made visible: colors, typography, spacing, themes and every icon.
+- **Actions**, **Forms**, **Feedback**, **Layout**: the components. Each has a docs page with its
+  props, and stories for its variants and states. **Forms/Anatomy** explains the parts of a field;
+  **Forms/Form engine** shows JSON forms rendered with Octarine's components.
+- The toolbar switches the **theme**, **light or dark** mode, and the **language** of the text
+  Octarine adds itself. Every component works in every combination.
+
+## Setting up an app
+
+```ts
+// vite.config.ts
+import { octarineIcons } from '@octarine/icons/vite'
+import tailwindcss from '@tailwindcss/vite'
+import vue from '@vitejs/plugin-vue'
+export default defineConfig({ plugins: [vue(), tailwindcss(), octarineIcons()] })
+```
+
+```css
+/* src/style.css */
+@import '@octarine/tailwind';
+@import '@octarine/tokens/themes/all.css';
+@source '../node_modules/@octarine/vue/dist';
+```
+
+```ts
+// main.ts
+import { createIcons } from '@octarine/vue'
+import icons from 'virtual:octarine-icons'
+import './style.css'
+
+createApp(App).use(createIcons(icons)).mount('#app')
+```
+
+```vue
+<script setup lang="ts">
+import { OButton, OField, OInput, useColorMode, useTheme } from '@octarine/vue'
+
+const { theme } = useTheme() // <html data-theme>, and the theme's fonts
+const { toggle } = useColorMode() // <html data-mode>
+</script>
+
+<template>
+  <OField label="Email" hint="We never share it.">
+    <OInput type="email" autocomplete="email" />
+  </OField>
+  <OButton icon="moon" @click="toggle">Dark mode</OButton>
+</template>
+```
+
+`QUICKSTART.md` in the repository walks through this step by step.
+
+## Themes
+
+Five themes fill exactly the same tokens, so they can be swapped without touching a component:
+**Octarine** (the default), **Vellum**, **Circuit**, **Hearth** and **Prism**. Set
+`data-theme="<name>"` and `data-mode="dark"` on `<html>`, or on any part of the page.
+
+## Principles
+
+- **Accessible: WCAG 2.2 AA is the floor.** Contrast is checked for every theme in light and dark,
+  components follow the WAI-ARIA patterns, everything works with a keyboard, and the a11y panel
+  (axe) runs on every story.
+- **Semantic tokens only.** Components say what a color is for (`surface`, `fg-muted`,
+  `danger-subtle`), never which color it is. That is what lets themes and dark mode work.
+- **Text styles, not hand-mixed typography.** `text-heading-2`, `text-body` and `text-caption` set
+  size, line height, weight, family and case together, per theme.
+- **Words in every language.** The text components add themselves ("(optional)", "Clear") comes in
+  English, Dutch, French and German, and follows the page's language.
