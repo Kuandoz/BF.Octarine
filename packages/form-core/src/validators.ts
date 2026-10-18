@@ -1,4 +1,5 @@
 import type {
+  JsonSchema,
   ValidationRule,
   Validator,
   ValidatorContext,
@@ -47,6 +48,27 @@ export function createValidatorContext(
       return isEmpty(value)
     },
   }
+}
+
+/**
+ * A validator that also says which parameters its rule takes, for editors and
+ * the definition schema. A plain function is a validator too.
+ */
+export function defineValidator(definition: {
+  validate: (context: ValidatorContext) => ValidatorResult
+  schema?: JsonSchema
+}): Validator {
+  const validate = (context: ValidatorContext) => definition.validate(context)
+  return definition.schema ? Object.assign(validate, { schema: definition.schema }) : validate
+}
+
+const ruleSchema = (properties: Record<string, JsonSchema>, required: string[] = []) => ({
+  properties,
+  ...(required.length && { required }),
+})
+const dateBound: JsonSchema = {
+  type: 'string',
+  description: 'A date, or today/now/endofday with an optional +N/-N days',
 }
 
 // Opt-in helper for validators that shouldn't run against an empty value —
@@ -160,24 +182,35 @@ function compareValues(value: unknown, other: unknown, op: string): boolean {
   }
 }
 
-const globalValidators: ValidatorRegistry = {
+// The validators every form has. A form adds its own (or replaces one) with
+// the `validators` option.
+export const builtInValidators: Readonly<ValidatorRegistry> = Object.freeze({
   required: ({ isEmpty: empty }) =>
     empty ? { valid: false, key: 'formRenderer.validation.required' } : { valid: true },
-  minLength: skipWhenEmpty(({ value, rule }) => {
-    const min = Number(rule.value)
-    return lengthOf(value) >= min
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.minLength', params: { min } }
+  minLength: defineValidator({
+    schema: ruleSchema({ value: { type: 'integer', minimum: 0 } }, ['value']),
+    validate: skipWhenEmpty(({ value, rule }) => {
+      const min = Number(rule.value)
+      return lengthOf(value) >= min
+        ? { valid: true }
+        : { valid: false, key: 'formRenderer.validation.minLength', params: { min } }
+    }),
   }),
-  maxLength: skipWhenEmpty(({ value, rule }) => {
-    const max = Number(rule.value)
-    return lengthOf(value) <= max
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.maxLength', params: { max } }
+  maxLength: defineValidator({
+    schema: ruleSchema({ value: { type: 'integer', minimum: 0 } }, ['value']),
+    validate: skipWhenEmpty(({ value, rule }) => {
+      const max = Number(rule.value)
+      return lengthOf(value) <= max
+        ? { valid: true }
+        : { valid: false, key: 'formRenderer.validation.maxLength', params: { max } }
+    }),
   }),
-  pattern: skipWhenEmpty(({ value, rule }) => {
-    const isValid = new RegExp(String(rule.value)).test(String(value))
-    return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.pattern' }
+  pattern: defineValidator({
+    schema: ruleSchema({ value: { type: 'string', format: 'regex' } }, ['value']),
+    validate: skipWhenEmpty(({ value, rule }) => {
+      const isValid = new RegExp(String(rule.value)).test(String(value))
+      return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.pattern' }
+    }),
   }),
   email: skipWhenEmpty(({ value }) =>
     EMAIL_PATTERN.test(String(value))
@@ -214,46 +247,55 @@ const globalValidators: ValidatorRegistry = {
       ? { valid: true }
       : { valid: false, key: 'formRenderer.validation.iban' },
   ),
-  oneOf: skipWhenEmpty(({ value, rule }) => {
-    const allowed = Array.isArray(rule.values) ? rule.values : []
-    return allowed.includes(value)
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.oneOf' }
+  oneOf: defineValidator({
+    schema: ruleSchema({ values: { type: 'array' } }, ['values']),
+    validate: skipWhenEmpty(({ value, rule }) => {
+      const allowed = Array.isArray(rule.values) ? rule.values : []
+      return allowed.includes(value)
+        ? { valid: true }
+        : { valid: false, key: 'formRenderer.validation.oneOf' }
+    }),
   }),
   // A single value or an array of values, every one of which must appear in
   // `rule.values` — the array case is what distinguishes this from `oneOf`
   // (e.g. a set of checkboxes that must all come from an allowed set).
-  flags: skipWhenEmpty(({ value, rule }) => {
-    const ignoreCase = !!rule.ignoreCase
-    const normalize = (item: unknown) => (ignoreCase ? String(item).toLowerCase() : String(item))
-    const allowed = (Array.isArray(rule.values) ? rule.values : []).map(normalize)
-    const items = Array.isArray(value) ? value : [value]
-    return items.every((item) => allowed.includes(normalize(item)))
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.flags' }
+  flags: defineValidator({
+    schema: ruleSchema({ values: { type: 'array' }, ignoreCase: { type: 'boolean' } }, ['values']),
+    validate: skipWhenEmpty(({ value, rule }) => {
+      const ignoreCase = !!rule.ignoreCase
+      const normalize = (item: unknown) => (ignoreCase ? String(item).toLowerCase() : String(item))
+      const allowed = (Array.isArray(rule.values) ? rule.values : []).map(normalize)
+      const items = Array.isArray(value) ? value : [value]
+      return items.every((item) => allowed.includes(normalize(item)))
+        ? { valid: true }
+        : { valid: false, key: 'formRenderer.validation.flags' }
+    }),
   }),
   // Cross-field comparison: against another path's live value (`rule.path`,
   // resolved in the current row's scope) if given, else a literal
   // `rule.value`. `op` is one of eq/ne/gt/ge/lt/le.
-  compare: skipWhenEmpty(({ value, rule, scope }) => {
-    const other = rule.path !== undefined ? getProperty(scope, String(rule.path)) : rule.value
-    const isValid = compareValues(value, other, String(rule.op ?? 'eq'))
-    return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.compare' }
+  compare: defineValidator({
+    schema: ruleSchema({
+      path: { type: 'string' },
+      value: {},
+      op: { enum: ['eq', 'ne', 'gt', 'ge', 'lt', 'le'] },
+    }),
+    validate: skipWhenEmpty(({ value, rule, scope }) => {
+      const other = rule.path !== undefined ? getProperty(scope, String(rule.path)) : rule.value
+      const isValid = compareValues(value, other, String(rule.op ?? 'eq'))
+      return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.compare' }
+    }),
   }),
-  date: skipWhenEmpty((context) => validateDateRange(context, 'formRenderer.validation.date')),
-  datetime: skipWhenEmpty((context) =>
-    validateDateRange(context, 'formRenderer.validation.datetime'),
-  ),
-}
-
-export function registerValidator(type: string, validator: Validator): void {
-  globalValidators[type] = validator
-}
-
-export function registerValidators(validators: ValidatorRegistry): void {
-  Object.assign(globalValidators, validators)
-}
-
-export function getGlobalValidatorRegistry(): ValidatorRegistry {
-  return globalValidators
-}
+  date: defineValidator({
+    schema: ruleSchema({ min: dateBound, max: dateBound }),
+    validate: skipWhenEmpty((context) =>
+      validateDateRange(context, 'formRenderer.validation.date'),
+    ),
+  }),
+  datetime: defineValidator({
+    schema: ruleSchema({ min: dateBound, max: dateBound }),
+    validate: skipWhenEmpty((context) =>
+      validateDateRange(context, 'formRenderer.validation.datetime'),
+    ),
+  }),
+})

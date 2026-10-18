@@ -17,6 +17,7 @@ export {
 } from './messages'
 export {
   declareFieldKeys,
+  DEFAULT_REPEAT_TYPES,
   expandWildcardPath,
   getProperty,
   getScope,
@@ -32,10 +33,9 @@ export type { ValidateSubmissionOptions } from './validateSubmission'
 export { ValidationService } from './ValidationService'
 export {
   createValidatorContext,
-  getGlobalValidatorRegistry,
+  builtInValidators,
+  defineValidator,
   isEmpty,
-  registerValidator,
-  registerValidators,
   skipWhenEmpty,
 } from './validators'
 export {

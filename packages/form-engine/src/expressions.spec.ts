@@ -13,7 +13,7 @@ import {
 } from '@octarine/form-core'
 
 import { FormEngine } from './FormEngine'
-import { provideFormRendererServices } from './services'
+import { createForms } from './forms'
 import type { ExpressionLanguage, FormDefinition } from './types'
 
 // A toy language: "field is value", "not field", or "fn(field)".
@@ -102,15 +102,10 @@ describe('a form written in another language', () => {
   })
 
   it('uses it for hide, rule conditions and required markers', () => {
-    const engine = new FormEngine(
-      definition(),
-      { mode: 'phone', wantsCall: true },
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      withExpressionLanguages([toy]),
-    )
+    const engine = new FormEngine(definition(), {
+      model: { mode: 'phone', wantsCall: true },
+      expressionLanguages: withExpressionLanguages([toy]),
+    })
 
     expect(engine.isHidden('phone')).toBe(false)
     expect(engine.isRequired('phone')).toBe(true)
@@ -128,24 +123,19 @@ describe('a form written in another language', () => {
     expect(() => new FormEngine(definition())).toThrow('expression language "toy"')
   })
 
-  it('gets the language from provideFormRendererServices', () => {
+  it('gets the language from createForms', () => {
     const Field = defineComponent({
       props: ['field'],
       setup: (props) => () => h('div', { class: 'field' }, props.field.path),
     })
-    const App = defineComponent({
-      setup() {
-        provideFormRendererServices({ expressionLanguages: [toy] })
-        return () =>
-          h(FormRenderer, {
-            definition: definition(),
-            model: { wantsCall: false },
-            components: { text: Field },
-          })
-      },
+    const forms = createForms({
+      expressionLanguages: [toy],
+      fields: [{ type: 'text', component: Field }],
     })
-
-    const wrapper = mount(App)
+    const wrapper = mount(FormRenderer, {
+      props: { definition: definition(), model: { wantsCall: false } },
+      global: { plugins: [forms] },
+    })
     expect(wrapper.findAll('.field').map((field) => field.text())).toEqual(['mode'])
   })
 })

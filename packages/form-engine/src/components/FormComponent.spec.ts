@@ -9,7 +9,7 @@ import FormRows from './FormRows.vue'
 
 import { FORM_ENGINE_KEY } from '../composables/useFormEngine'
 import { FormEngine } from '../FormEngine'
-import { registerComponent } from '../registry'
+import type { FieldType } from '../fields'
 import type { FieldDefinition, FormDefinition } from '../types'
 
 const StubField = defineComponent({
@@ -19,7 +19,7 @@ const StubField = defineComponent({
   },
 })
 
-registerComponent('stub', StubField)
+const fields: Record<string, FieldType> = { stub: { type: 'stub', component: StubField } }
 
 function mountWithEngine(engine: FormEngine, components: FieldDefinition[]) {
   return mount(FormComponent, {
@@ -30,19 +30,19 @@ function mountWithEngine(engine: FormEngine, components: FieldDefinition[]) {
 
 describe('FormComponent hide conditions', () => {
   it('renders a field with no hide condition', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     const wrapper = mountWithEngine(engine, [{ type: 'stub', path: 'a' }])
     expect(wrapper.findAll('.stub-field')).toHaveLength(1)
   })
 
   it('hides a field whose hide is a boolean true', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     const wrapper = mountWithEngine(engine, [{ type: 'stub', path: 'a', hide: true }])
     expect(wrapper.findAll('.stub-field')).toHaveLength(0)
   })
 
   it('hides a field based on a string expression evaluated against the model', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     engine.setValue('showField', false)
 
     const wrapper = mountWithEngine(engine, [
@@ -59,7 +59,7 @@ describe('FormComponent hide conditions', () => {
 
 describe('FormComponent inline', () => {
   it('renders the fields without the wrapping stack', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     const wrapper = mount(
       {
         render: () =>
@@ -83,7 +83,7 @@ describe('FormComponent inline', () => {
 
 describe('FormComponent grid', () => {
   it('marks each field with the width it asks for', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     const wrapper = mountWithEngine(engine, [
       { type: 'stub', path: 'a' },
       { type: 'stub', path: 'b', layout: { width: 'half' } },
@@ -95,7 +95,7 @@ describe('FormComponent grid', () => {
   })
 
   it('uses no styling classes of its own', () => {
-    const engine = new FormEngine({ components: [] })
+    const engine = new FormEngine({ components: [] }, { fields })
     const wrapper = mountWithEngine(engine, [{ type: 'stub', path: 'a' }])
     expect(wrapper.attributes('class')).toBeUndefined()
     expect(wrapper.get('[data-form-item]').attributes('class')).toBeUndefined()
@@ -115,8 +115,8 @@ describe('FormComponent and isHidden', () => {
     props: ['field'],
     setup: (props: { field: FieldDefinition }) => () => h(FormRows, { field: props.field }),
   })
-  registerComponent('agree-group', Group)
-  registerComponent('repeat', Rows)
+  fields['agree-group'] = { type: 'agree-group', component: Group }
+  fields.repeat = { type: 'repeat', component: Rows, rows: true }
 
   it('agree on every path, through containers, rows and both scopes', async () => {
     const definition: FormDefinition = {
@@ -142,8 +142,11 @@ describe('FormComponent and isHidden', () => {
       ],
     }
     const engine = new FormEngine(definition, {
-      mode: 'phone',
-      items: [{ kind: 'other' }, { kind: 'x' }],
+      fields,
+      model: {
+        mode: 'phone',
+        items: [{ kind: 'other' }, { kind: 'x' }],
+      },
     })
     const wrapper = mountWithEngine(engine, definition.components)
     const paths = [

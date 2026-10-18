@@ -24,12 +24,12 @@ describe('validation of hidden fields', () => {
   })
 
   it('rejects an invalid value in a hidden field', () => {
-    const engine = new FormEngine(contact, { wantsCall: false, phone: 'not a number' })
+    const engine = new FormEngine(contact, { model: { wantsCall: false, phone: 'not a number' } })
     expect(engine.validateModel()).toBe(false)
   })
 
   it('keeps an error when its field is hidden', () => {
-    const engine = new FormEngine(contact, { wantsCall: true })
+    const engine = new FormEngine(contact, { model: { wantsCall: true } })
     engine.validateModel()
     engine.setValue('wantsCall', false)
     expect(engine.getValidationResult('phone')?.valid).toBe(false)
@@ -125,13 +125,15 @@ describe('isHidden', () => {
     }
 
     it("evaluates a row's hide against that row", () => {
-      const engine = new FormEngine(orders, structuredClone(model))
+      const engine = new FormEngine(orders, { model: structuredClone(model) })
       expect(engine.isHidden('items.0.reason')).toBe(true)
       expect(engine.isHidden('items.1.reason')).toBe(false)
     })
 
     it('hides every row when the repeat itself is hidden', () => {
-      const engine = new FormEngine(orders, { ...structuredClone(model), hasOrders: false })
+      const engine = new FormEngine(orders, {
+        model: { ...structuredClone(model), hasOrders: false },
+      })
       expect(engine.isHidden('items.1.reason')).toBe(true)
     })
 
@@ -156,10 +158,12 @@ describe('isHidden', () => {
           validations: { 'groups.*.members.*.name': [{ type: 'required' }] },
         },
         {
-          groups: [
-            { open: false, members: [{}] },
-            { open: true, members: [{}] },
-          ],
+          model: {
+            groups: [
+              { open: false, members: [{}] },
+              { open: true, members: [{}] },
+            ],
+          },
         },
       )
       expect(engine.isHidden('groups.0.members.0.name')).toBe(true)

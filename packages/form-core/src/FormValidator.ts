@@ -19,8 +19,12 @@ export interface FormValidatorOptions {
   validators?: ValidatorRegistry
   // Languages a form can name in `definition.expressions`, besides 'js'.
   expressionLanguages?: readonly ExpressionLanguage[]
-  // The functions expressions can call. Default: `age()`.
+  // Functions expressions can call, besides `age()`; one with the same name
+  // replaces it.
   functions?: Record<string, ExpressionFunction>
+  // Field types whose `components` are the fields of each row. Default:
+  // `['repeat']`.
+  repeatTypes?: readonly string[]
 }
 
 // The built-in 'js' language plus `extra`, where an extra one with the same
@@ -58,7 +62,7 @@ export class FormValidator {
         withExpressionLanguages(options.expressionLanguages),
         definition.expressions,
       ),
-      options.functions ?? defaultExpressionFunctions,
+      { ...defaultExpressionFunctions, ...options.functions },
     )
     this.validation = new ValidationService(options.validators, this.expressions)
   }

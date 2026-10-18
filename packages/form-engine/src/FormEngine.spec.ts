@@ -43,7 +43,7 @@ describe('FormEngine', () => {
   })
 
   it('seeds the model from an initial value', () => {
-    const engine = new FormEngine(definition, { firstName: 'Grace' })
+    const engine = new FormEngine(definition, { model: { firstName: 'Grace' } })
     expect(engine.getValue('firstName')).toBe('Grace')
   })
 
@@ -52,15 +52,6 @@ describe('FormEngine', () => {
     expect(engine.isDirty('firstName')).toBe(false)
     engine.setValue('firstName', 'Ada')
     expect(engine.isDirty('firstName')).toBe(true)
-  })
-
-  it('emits modelChanged on write', () => {
-    const engine = new FormEngine(definition)
-    const seen: string[] = []
-    engine.on('modelChanged', (event) => seen.push(event.path))
-
-    engine.setValue('firstName', 'Ada')
-    expect(seen).toEqual(['firstName'])
   })
 
   it('fails validation for an empty required field', () => {
@@ -96,7 +87,7 @@ describe('FormEngine', () => {
         endDate: [{ type: 'required' }],
       },
     }
-    const engine = new FormEngine(crossField, { startDate: '2024-01-01' })
+    const engine = new FormEngine(crossField, { model: { startDate: '2024-01-01' } })
     expect(engine.validateModel()).toBe(false)
     expect(engine.getValidationResult('endDate')?.valid).toBe(false)
   })
@@ -118,11 +109,13 @@ describe('FormEngine', () => {
       components: [{ type: 'text', path: 'code' }],
       validations: { code: [{ type: 'evenLength' }] },
     }
-    const engine = new FormEngine(withCustomRule, undefined, {
-      evenLength: ({ value, isEmpty }) => {
-        if (isEmpty) return { valid: true }
-        const length = typeof value === 'string' ? value.length : 0
-        return length % 2 === 0 ? { valid: true } : { valid: false, key: 'evenLength' }
+    const engine = new FormEngine(withCustomRule, {
+      validators: {
+        evenLength: ({ value, isEmpty }) => {
+          if (isEmpty) return { valid: true }
+          const length = typeof value === 'string' ? value.length : 0
+          return length % 2 === 0 ? { valid: true } : { valid: false, key: 'evenLength' }
+        },
       },
     })
 
@@ -138,8 +131,10 @@ describe('FormEngine', () => {
       components: [{ type: 'text', path: 'code' }],
       validations: { code: [{ type: 'required' }, { type: 'evenLength' }] },
     }
-    const engine = new FormEngine(withMultipleRules, undefined, {
-      evenLength: () => ({ valid: false, key: 'evenLength' }),
+    const engine = new FormEngine(withMultipleRules, {
+      validators: {
+        evenLength: () => ({ valid: false, key: 'evenLength' }),
+      },
     })
 
     engine.validateModel()
@@ -163,8 +158,9 @@ describe('FormEngine', () => {
   })
 
   it('localizes validator messages via a custom translation provider', () => {
-    const engine = new FormEngine(definition, undefined, undefined, {
-      t: (key) => (key === 'formRenderer.validation.required' ? 'Dit veld is verplicht.' : key),
+    const engine = new FormEngine(definition, {
+      translate: (key) =>
+        key === 'formRenderer.validation.required' ? 'Dit veld is verplicht.' : key,
     })
     engine.submit()
     expect(engine.getError('firstName')).toBe('Dit veld is verplicht.')
@@ -175,8 +171,9 @@ describe('FormEngine', () => {
       components: [{ type: 'text', path: 'code' }],
       validations: { code: [{ type: 'minLength', value: 3 }] },
     }
-    const engine = new FormEngine(withLength, { code: 'ab' }, undefined, {
-      t: (key, params) => `${key}:${JSON.stringify(params)}`,
+    const engine = new FormEngine(withLength, {
+      model: { code: 'ab' },
+      translate: (key, params) => `${key}:${JSON.stringify(params)}`,
     })
     engine.submit()
     expect(engine.getValidationResult('code')).toEqual({
@@ -198,7 +195,7 @@ describe('FormEngine', () => {
         nl: { Nickname: { Required: 'Kies een bijnaam.' } },
       },
     }
-    const engine = new FormEngine(localised, undefined, undefined, undefined, 'nl')
+    const engine = new FormEngine(localised, { locale: 'nl' })
     engine.submit()
     expect(engine.getError('nickname')).toBe('Kies een bijnaam.')
     engine.setLocale('en')
@@ -232,7 +229,7 @@ describe('FormEngine', () => {
         fr: { Greeting: 'Bonjour' },
       },
     }
-    const engine = new FormEngine(withLocalisations, undefined, undefined, undefined, 'fr')
+    const engine = new FormEngine(withLocalisations, { locale: 'fr' })
     expect(engine.localise('Greeting')).toBe('Bonjour')
   })
 
@@ -249,7 +246,7 @@ describe('FormEngine', () => {
         nl: { Concerned: { InszChild: 'Kind', Insz: 'Persoon' } },
       },
     }
-    const engine = new FormEngine(withLocalisations, { relationType: 'MijnKind' })
+    const engine = new FormEngine(withLocalisations, { model: { relationType: 'MijnKind' } })
     const label = {
       'Concerned.InszChild': "relationType === 'MijnKind'",
       'Concerned.Insz': "relationType !== 'MijnKind'",
@@ -265,13 +262,13 @@ describe('FormEngine', () => {
       components: [],
       localisations: { default: 'nl', nl: { Buttons: { Resend: 'Opnieuw versturen' } } },
     }
-    const engine = new FormEngine(withLocalisations, { isReminder: false })
+    const engine = new FormEngine(withLocalisations, { model: { isReminder: false } })
     const label = { 'Buttons.Send': 'isReminder', 'Buttons.Resend': true }
     expect(engine.localise(label)).toBe('Opnieuw versturen')
   })
 
   it('resolves to an empty string when no branch of a label object matches', () => {
-    const engine = new FormEngine(definition, { relationType: 'Neither' })
+    const engine = new FormEngine(definition, { model: { relationType: 'Neither' } })
     const label = {
       'Concerned.InszChild': "relationType === 'MijnKind'",
       'Concerned.Insz': "relationType === 'SomethingElse'",
@@ -289,8 +286,10 @@ describe('FormEngine', () => {
   })
 
   it("falls back to an injected list provider for names not in the form's own lists", async () => {
-    const engine = new FormEngine(definition, undefined, undefined, undefined, undefined, {
-      getList: (name) => [{ name, fromProvider: true }],
+    const engine = new FormEngine(definition, {
+      lists: {
+        getList: (name) => [{ name, fromProvider: true }],
+      },
     })
     expect(await engine.getList('remoteList')).toEqual([{ name: 'remoteList', fromProvider: true }])
   })
@@ -309,7 +308,7 @@ describe('FormEngine', () => {
       components: [],
       defaults: { firstName: 'Ada' },
     }
-    const engine = new FormEngine(withDefaults, { lastName: 'Lovelace' })
+    const engine = new FormEngine(withDefaults, { model: { lastName: 'Lovelace' } })
     expect(engine.model).toEqual({ lastName: 'Lovelace' })
   })
 
@@ -319,7 +318,7 @@ describe('FormEngine', () => {
       constants: { requestType: 'renewal' },
     }
     const withoutModel = new FormEngine(withConstants)
-    const withModel = new FormEngine(withConstants, { firstName: 'Ada' })
+    const withModel = new FormEngine(withConstants, { model: { firstName: 'Ada' } })
 
     expect(withoutModel.getValue('requestType')).toBe('renewal')
     expect(withModel.getValue('requestType')).toBe('renewal')
@@ -332,7 +331,7 @@ describe('FormEngine', () => {
       defaults: { firstName: 'Ada' },
       constants: { requestType: 'renewal' },
     }
-    const engine = new FormEngine(withBoth, { firstName: 'Grace', requestType: 'new' })
+    const engine = new FormEngine(withBoth, { model: { firstName: 'Grace', requestType: 'new' } })
     expect(engine.getValue('firstName')).toBe('Grace')
     expect(engine.getValue('requestType')).toBe('new')
   })
@@ -415,7 +414,7 @@ describe('FormEngine', () => {
   })
 
   it('passes the current locale to expressions via env.language', () => {
-    const withLocale = new FormEngine(definition, undefined, undefined, undefined, 'fr')
+    const withLocale = new FormEngine(definition, { locale: 'fr' })
     expect(withLocale.resolveCondition("env.language === 'fr'")).toBe(true)
     expect(withLocale.resolveCondition("env.language === 'nl'")).toBe(false)
   })
@@ -466,7 +465,7 @@ describe('FormEngine', () => {
     }
 
     it("reads and writes a repeated row's fields by their fully-resolved path", () => {
-      const engine = new FormEngine(withRepeat, { items: [{ label: 'Widget' }] })
+      const engine = new FormEngine(withRepeat, { model: { items: [{ label: 'Widget' }] } })
       expect(engine.getValue('items.0.label')).toBe('Widget')
 
       engine.setValue('items.0.quantity', 5)
@@ -475,8 +474,10 @@ describe('FormEngine', () => {
 
     it('resolves an unqualified condition inside a row against that row, not the whole model', () => {
       const engine = new FormEngine(withRepeat, {
-        items: [{ type: 'x' }, { type: 'y' }],
-        type: 'unrelated-root-field',
+        model: {
+          items: [{ type: 'x' }, { type: 'y' }],
+          type: 'unrelated-root-field',
+        },
       })
       // Row 0's own `type` is "x" -> quantity shown; row 1's is "y" -> hidden.
       // A root-scoped bug (legacy's confirmed inconsistency) would instead
@@ -490,7 +491,7 @@ describe('FormEngine', () => {
     })
 
     it('reaches the whole model from inside a row via the root: true escape hatch', () => {
-      const engine = new FormEngine(withRepeat, { items: [{}], formType: 'special' })
+      const engine = new FormEngine(withRepeat, { model: { items: [{}], formType: 'special' } })
       const rootCondition = { expression: "formType === 'special'", root: true }
       expect(
         engine.resolveCondition(rootCondition, false, { arrayPath: 'items', arrayIndex: 0 }),
@@ -498,7 +499,7 @@ describe('FormEngine', () => {
     })
 
     it("declares each existing row's fields at construction, so an unqualified reference to an unset sibling doesn't throw", () => {
-      const engine = new FormEngine(withRepeat, { items: [{ label: 'Widget' }] })
+      const engine = new FormEngine(withRepeat, { model: { items: [{ label: 'Widget' }] } })
       // `type` was never set on this row, but it's declared -> "undefined !== 'x'" is true, not a thrown ReferenceError falling back to false.
       expect(
         engine.resolveCondition("type !== 'x'", false, { arrayPath: 'items', arrayIndex: 0 }),
@@ -507,7 +508,9 @@ describe('FormEngine', () => {
 
     it("validates every row via validateModel, keyed by each row's resolved path", () => {
       const engine = new FormEngine(withRepeat, {
-        items: [{ type: 'x', quantity: undefined }, { type: 'y' }],
+        model: {
+          items: [{ type: 'x', quantity: undefined }, { type: 'y' }],
+        },
       })
       const valid = engine.validateModel()
       expect(valid).toBe(false)
@@ -516,7 +519,7 @@ describe('FormEngine', () => {
     })
 
     it("gates a row's own validation rule against that row's fields via validatePath", () => {
-      const engine = new FormEngine(withRepeat, { items: [{ type: 'x' }] })
+      const engine = new FormEngine(withRepeat, { model: { items: [{ type: 'x' }] } })
       expect(engine.validatePath('items.0.quantity').valid).toBe(false)
 
       engine.setValue('items.0.quantity', 3)
@@ -524,7 +527,7 @@ describe('FormEngine', () => {
     })
 
     it('reports isRequired for a resolved path inside a repeat, via the wildcard entry', () => {
-      const engine = new FormEngine(withRepeat, { items: [{ type: 'x' }] })
+      const engine = new FormEngine(withRepeat, { model: { items: [{ type: 'x' }] } })
       expect(engine.isRequired('items.0.quantity')).toBe(true)
       expect(engine.isRequired('items.0.label')).toBe(false)
     })
@@ -546,7 +549,9 @@ describe('FormEngine', () => {
         ],
       }
       const engine = new FormEngine(nested, {
-        parents: [{ children: [{ isMinor: true }, { isMinor: false }] }],
+        model: {
+          parents: [{ children: [{ isMinor: true }, { isMinor: false }] }],
+        },
       })
       expect(engine.getValue('parents.0.children.0.name')).toBeUndefined()
       engine.setValue('parents.0.children.0.name', 'Kid')
@@ -586,7 +591,9 @@ describe('FormEngine', () => {
         },
       }
       const engine = new FormEngine(nested, {
-        parents: [{ children: [{}, { name: 'Kid' }] }, { children: [{}] }],
+        model: {
+          parents: [{ children: [{}, { name: 'Kid' }] }, { children: [{}] }],
+        },
       })
       const valid = engine.validateModel()
       expect(valid).toBe(false)
@@ -596,7 +603,7 @@ describe('FormEngine', () => {
     })
 
     it('appends a row via addRepeatItem and re-validates the whole model', () => {
-      const engine = new FormEngine(withRepeat, { items: [] })
+      const engine = new FormEngine(withRepeat, { model: { items: [] } })
       engine.addRepeatItem('items', { type: 'x' })
       expect(engine.getValue('items')).toEqual([{ type: 'x' }])
       expect(engine.getValidationResult('items.0.quantity')?.valid).toBe(false)
@@ -604,10 +611,12 @@ describe('FormEngine', () => {
 
     it("removes a row via removeRepeatItem, shifting later rows' indices", () => {
       const engine = new FormEngine(withRepeat, {
-        items: [
-          { type: 'x', quantity: 1 },
-          { type: 'x', quantity: 2 },
-        ],
+        model: {
+          items: [
+            { type: 'x', quantity: 1 },
+            { type: 'x', quantity: 2 },
+          ],
+        },
       })
       engine.removeRepeatItem('items', 0)
       expect(engine.getValue('items')).toEqual([{ type: 'x', quantity: 2 }])

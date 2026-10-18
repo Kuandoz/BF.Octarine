@@ -158,8 +158,8 @@ Abstractions that keep the "where does it run" choice open:
 
 All items done. Left over, for later steps:
 
-- [ ] The engine recognises a repeat by `type: 'repeat'` (for `isHidden`, labels and screen order).
-      A custom repeat type needs to say it has rows; part of `defineField` (step 3).
+- [x] A custom repeat type says it has rows with `defineField({ rows: true })` (step 3); the server
+      gets the same list through `repeatTypes`.
 - [ ] Rows are keyed by index, and touched state by path: after removing row 1, row 2 (now row 1)
       takes over row 1's touched state. Stable row ids would fix it.
 - [ ] After Remove, focus has to go somewhere sensible (the next row, or the Add button); that's
@@ -170,27 +170,24 @@ All items done. Left over, for later steps:
 All items done. Left over, for later steps:
 
 - [ ] Message keys still start with `formRenderer.validation.`; flat keys come with step 4.
-- [ ] Global registries (`registerValidator`) live in form-core as module state until
-      `createForms` (step 3) replaces them.
 - [ ] `FormEngine.spec.ts` and `expressions.spec.ts` still test some rules through the engine;
       move pure ones to form-core when touching them.
 
 ### 3. Engine API redesign
 
-- [ ] `createForms({ fields, validators, functions, lists, translate, expressions })` replaces the
-      global registries (`registerComponent`, `registerValidator`) and `provideFormRendererServices`.
-      Validators and functions come from the shared registration module.
-- [ ] `defineField({ type, component, schema })`: typed field schemas instead of passing every
-      property through. Validators declare their parameters the same way.
-- [ ] `useForm(definition, options)` with `<FormRenderer :form>`; an options object instead of the
-      `FormEngine` constructor's seven positional parameters.
-- [ ] Explicit repeat scope instead of the `useFormEngine()` Proxy.
+- [x] `createForms(options)` (fields, validators, functions, expressionLanguages, repeatTypes,
+      lists, translate) replaces the global registries and `provideFormRendererServices`. The rule
+      options have the shape of `validateSubmission`'s, so one module feeds both.
+- [x] `defineField({ type, component, rows?, schema? })` and `defineValidator({ validate, schema })`;
+      the built-in validators declare their parameters. `schema` is JSON Schema data for step 5; the
+      field's props are still passed through as `attrs` (no TS types derived from the schema).
+- [x] `useForm(definition, options)` with `<FormRenderer :form>`; `new FormEngine(definition, options)`
+      instead of seven positional parameters.
+- [x] Explicit repeat scope instead of the `useFormEngine()` Proxy: calls take the row.
 - [ ] `reset()`, `markPristine()`, form-level dirty state.
-- [ ] Say clearly whether the app's `model` object is updated. Today the engine copies it (which
-      keeps two forms apart); values are read from `engine.model`.
-- [ ] Drop **mitt**: it backs one event (`modelChanged`) that nothing in the package listens to;
-      apps can `watch(engine.model)`.
-- [ ] Configurable expression functions (`age()` is the only one, and hard-coded).
+- [x] The app's `model` is never changed: the engine works on a copy (documented).
+- [x] mitt is gone; apps can `watch(engine.model)`.
+- [x] Configurable expression functions, added to `age()`.
 - [ ] Async validators with a pending state; delegating a rule to the server.
 
 ### 4. Localisation

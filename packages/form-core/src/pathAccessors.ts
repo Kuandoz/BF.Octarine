@@ -2,6 +2,11 @@ import type { FieldDefinition, RepeatContext } from '@octarine/form-abstractions
 
 const PATH_SEGMENT = /[^.[\]]+/g
 
+// The field types whose `components` are the fields of each row, at
+// `<path>.<index>`. A form names its own with the `repeatTypes` option
+// (from `defineField({ rows: true })` in the engine).
+export const DEFAULT_REPEAT_TYPES: readonly string[] = ['repeat']
+
 function segments(path: string): string[] {
   return path.match(PATH_SEGMENT) ?? []
 }
@@ -69,29 +74,33 @@ export function resolveFieldPath(fieldPath: string | undefined, context?: Repeat
 // top-level keys (recursively, so nested repeats-within-repeats work too) —
 // a freshly-added row is the caller's responsibility (see FormEngine.
 // addRepeatItem), this only covers items already present in `target`.
-export function declareFieldKeys(fields: FieldDefinition[], target: Record<string, unknown>): void {
+export function declareFieldKeys(
+  fields: FieldDefinition[],
+  target: Record<string, unknown>,
+  repeatTypes: readonly string[] = DEFAULT_REPEAT_TYPES,
+): void {
   for (const field of fields) {
     if (!field.path) {
-      if (field.components) declareFieldKeys(field.components, target)
+      if (field.components) declareFieldKeys(field.components, target, repeatTypes)
       continue
     }
 
     const key = getTopLevelKey(field.path)
     if (key !== undefined && !(key in target)) target[key] = undefined
 
-    if (field.type === 'repeat') {
+    if (repeatTypes.includes(field.type)) {
       const items = getProperty(target, field.path)
       if (Array.isArray(items)) {
         for (const item of items) {
           if (item !== null && typeof item === 'object') {
-            declareFieldKeys(field.components ?? [], item as Record<string, unknown>)
+            declareFieldKeys(field.components ?? [], item as Record<string, unknown>, repeatTypes)
           }
         }
       }
       continue
     }
 
-    if (field.components) declareFieldKeys(field.components, target)
+    if (field.components) declareFieldKeys(field.components, target, repeatTypes)
   }
 }
 

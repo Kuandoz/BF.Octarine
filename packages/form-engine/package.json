@@ -25,8 +25,7 @@
   },
   "dependencies": {
     "@octarine/form-abstractions": "workspace:*",
-    "@octarine/form-core": "workspace:*",
-    "mitt": "^3.0.1"
+    "@octarine/form-core": "workspace:*"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

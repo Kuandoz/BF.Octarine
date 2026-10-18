@@ -9,7 +9,7 @@ import FormRows from './FormRows.vue'
 import { useField } from '../composables/useField'
 import { FORM_ENGINE_KEY } from '../composables/useFormEngine'
 import { FormEngine } from '../FormEngine'
-import { REGISTRY_KEY } from '../registry'
+import type { FieldType } from '../fields'
 import type { FieldDefinition, FormDefinition } from '../types'
 
 const TextField = defineComponent({
@@ -40,6 +40,11 @@ const Repeat = defineComponent({
   },
 })
 
+const fields: Record<string, FieldType> = {
+  text: { type: 'text', component: TextField },
+  repeat: { type: 'repeat', component: Repeat, rows: true },
+}
+
 const definition: FormDefinition = {
   components: [
     {
@@ -63,7 +68,6 @@ function mountRows(engine: FormEngine, rowSlot = false) {
     global: {
       provide: {
         [FORM_ENGINE_KEY as symbol]: engine,
-        [REGISTRY_KEY as symbol]: { text: TextField, repeat: Repeat },
       },
     },
   })
@@ -72,7 +76,10 @@ function mountRows(engine: FormEngine, rowSlot = false) {
 describe('FormRows', () => {
   it("renders each row's fields scoped to that row, also in nested repeats", () => {
     const engine = new FormEngine(definition, {
-      people: [{ name: 'Ada', phones: [{ number: '1' }, { number: '2' }] }, { name: 'Bob' }],
+      fields,
+      model: {
+        people: [{ name: 'Ada', phones: [{ number: '1' }, { number: '2' }] }, { name: 'Bob' }],
+      },
     })
     const wrapper = mountRows(engine)
     expect(wrapper.findAll('input').map((input) => input.attributes('data-path'))).toEqual([
@@ -87,7 +94,10 @@ describe('FormRows', () => {
   })
 
   it('follows rows being added and removed', async () => {
-    const engine = new FormEngine(definition, { people: [{ name: 'Ada' }] })
+    const engine = new FormEngine(definition, {
+      fields,
+      model: { people: [{ name: 'Ada' }] },
+    })
     const wrapper = mountRows(engine)
     engine.addRepeatItem('people', { name: 'Bob' })
     await nextTick()
@@ -99,12 +109,15 @@ describe('FormRows', () => {
   })
 
   it('renders nothing without an array', () => {
-    const engine = new FormEngine(definition)
+    const engine = new FormEngine(definition, { fields })
     expect(mountRows(engine).findAll('input')).toHaveLength(0)
   })
 
   it('gives a row slot its index, path and a remove function', async () => {
-    const engine = new FormEngine(definition, { people: [{ name: 'Ada' }, { name: 'Bob' }] })
+    const engine = new FormEngine(definition, {
+      fields,
+      model: { people: [{ name: 'Ada' }, { name: 'Bob' }] },
+    })
     const wrapper = mountRows(engine, true)
     expect(wrapper.findAll('.row').map((row) => row.attributes('data-row'))).toEqual([
       'people.0',

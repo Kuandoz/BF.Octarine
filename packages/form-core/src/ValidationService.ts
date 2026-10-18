@@ -6,7 +6,7 @@ import type {
 
 import { ExpressionService } from './ExpressionService'
 import { INVALID_KEY } from './messages'
-import { createValidatorContext, getGlobalValidatorRegistry } from './validators'
+import { builtInValidators, createValidatorContext } from './validators'
 import { warnOnce } from './warn'
 
 // Runs the rules of one path. The result names the first rule that failed
@@ -19,9 +19,7 @@ export class ValidationService {
     validators?: ValidatorRegistry,
     expressionService: ExpressionService = new ExpressionService(),
   ) {
-    this.validators = validators
-      ? { ...getGlobalValidatorRegistry(), ...validators }
-      : getGlobalValidatorRegistry()
+    this.validators = { ...builtInValidators, ...validators }
     this.expressionService = expressionService
   }
 

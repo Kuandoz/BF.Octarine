@@ -26,7 +26,7 @@ export function validateSubmission(
   // the browser: a key the client left out reads as undefined instead of
   // failing the condition (which would keep a required-if active).
   const declared = structuredClone(model)
-  declareFieldKeys(definition.components, declared)
+  declareFieldKeys(definition.components, declared, options.repeatTypes)
   const results = new FormValidator(definition, options).validateAll(declared, options.env)
   const errors: SubmissionError[] = []
   for (const [path, result] of results) {

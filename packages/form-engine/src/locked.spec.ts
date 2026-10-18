@@ -41,7 +41,7 @@ const definition = (): FormDefinition => ({
 
 describe('fields the person cannot change', () => {
   it('still validates them', () => {
-    const engine = new FormEngine(definition(), { locked: true })
+    const engine = new FormEngine(definition(), { model: { locked: true } })
     engine.validateModel()
     expect(engine.getValidationResult('reference')).toMatchObject({ valid: false })
     expect(engine.getValidationResult('code')).toMatchObject({ valid: false })
@@ -49,7 +49,7 @@ describe('fields the person cannot change', () => {
   })
 
   it('shows no error for a disabled, read-only or constant value', () => {
-    const engine = new FormEngine(definition(), { locked: true, name: 'Ann' })
+    const engine = new FormEngine(definition(), { model: { locked: true, name: 'Ann' } })
     engine.submit()
     expect(engine.getError('reference')).toBeUndefined()
     expect(engine.getError('code')).toBeUndefined()
@@ -58,7 +58,7 @@ describe('fields the person cannot change', () => {
   })
 
   it('follows a container that is disabled', () => {
-    const engine = new FormEngine(definition(), { locked: true })
+    const engine = new FormEngine(definition(), { model: { locked: true } })
     engine.submit()
     expect(engine.isLocked('address.city')).toBe(true)
     expect(engine.getError('address.city')).toBeUndefined()
@@ -70,7 +70,9 @@ describe('fields the person cannot change', () => {
 
   it('evaluates a condition in its row', () => {
     const engine = new FormEngine(definition(), {
-      items: [{ done: true }, { done: false }],
+      model: {
+        items: [{ done: true }, { done: false }],
+      },
     })
     engine.submit()
     expect(engine.getError('items.0.note')).toBeUndefined()
@@ -78,12 +80,12 @@ describe('fields the person cannot change', () => {
   })
 
   it("doesn't let those errors stop the submit", () => {
-    const engine = new FormEngine(definition(), { locked: true, name: 'Ann' })
+    const engine = new FormEngine(definition(), { model: { locked: true, name: 'Ann' } })
     expect(engine.submit()).toBe(true)
   })
 
   it('still stops the submit for an error the person can fix', () => {
-    const engine = new FormEngine(definition(), { locked: true })
+    const engine = new FormEngine(definition(), { model: { locked: true } })
     expect(engine.submit()).toBe(false)
     expect(engine.getErrors().map((error) => error.path)).toEqual(['name'])
   })

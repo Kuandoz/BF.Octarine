@@ -4,6 +4,7 @@ import {
   type FormDefinition,
   type FormEngine,
   FormRenderer,
+  useForm,
 } from '../../../../../packages/form-engine/src'
 import '../../../../../packages/form-engine/layout.css'
 import {
@@ -13,7 +14,7 @@ import {
   useLanguage,
   useMessages,
 } from '../../../../../packages/vue/src'
-import { fields } from './fields'
+import { forms } from './fields'
 
 // A FormRenderer set up the way an app would: Octarine's field components, the
 // required note, an error summary after a failed submit, and a Send button.
@@ -29,6 +30,12 @@ const t = useMessages()
 // Without a locale, the form follows the page language (<html lang>).
 const language = useLanguage()
 const formLocale = computed(() => props.locale ?? language.value.split('-')[0])
+// An app would `app.use(forms)` once; the stories pass theirs.
+const form = useForm(() => props.definition, {
+  model: () => props.model,
+  locale: formLocale,
+  forms,
+})
 const attempts = ref(0)
 const sent = ref<Record<string, unknown>>()
 
@@ -56,10 +63,7 @@ function onInvalid() {
 <template>
   <div class="flex max-w-2xl flex-col gap-6">
     <FormRenderer
-      :definition="definition"
-      :model="model"
-      :locale="formLocale"
-      :components="fields"
+      :form="form"
       :aria-label="label"
       class="flex flex-col gap-6"
       @invalid="onInvalid"

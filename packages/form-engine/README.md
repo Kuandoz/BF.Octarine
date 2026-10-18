@@ -7,7 +7,7 @@ It ships with **no concrete field components**: those come from [`@octarine/form
 from your own components, wired in as described below.
 
 Everything form-core and [`@octarine/form-abstractions`](../form-abstractions) export (the
-types, `validateSubmission`, `registerValidator`, `jsLanguage`, …) is exported from here too, so an
+types, `validateSubmission`, `defineValidator`, `jsLanguage`, …) is exported from here too, so an
 app needs only this package.
 
 ## Quick start
@@ -30,21 +30,35 @@ export const contact: FormDefinition = {
 }
 ```
 
-Register a component for each `type` (see [`useField`](#usefield) for writing one), then render
-the form:
+Set up the field types once (see [`useField`](#usefield) for writing one):
+
+```ts
+// main.ts
+import { createForms, defineField } from '@octarine/form-engine'
+import '@octarine/form-engine/layout.css'
+import { CheckboxField, TextField } from './fields'
+
+const forms = createForms({
+  fields: [
+    defineField({ type: 'text', component: TextField }),
+    defineField({ type: 'checkbox', component: CheckboxField }),
+  ],
+})
+app.use(forms)
+```
+
+Then render a form:
 
 ```vue
 <script setup lang="ts">
-import { FormRenderer } from '@octarine/form-engine'
-import '@octarine/form-engine/layout.css'
+import { FormRenderer, useForm } from '@octarine/form-engine'
 import { contact } from './contact'
-import { CheckboxField, TextField } from './fields'
 
-const fields = { text: TextField, checkbox: CheckboxField }
+const form = useForm(contact)
 </script>
 
 <template>
-  <FormRenderer :definition="contact" :components="fields" @submit="send">
+  <FormRenderer :form="form" @submit="send">
     <button type="submit">Send</button>
   </FormRenderer>
 </template>
@@ -133,11 +147,11 @@ its first control instead.
 Ids come from `useId()`, so they are unique within one Vue app. A page that
 mounts **several Vue apps** gives each its own `app.config.idPrefix`.
 
-`useFormEngine()` throws if called outside a `FormRenderer`'s subtree — a
-clear failure the first time a component is mounted standalone (Storybook, an
-isolated test), rather than a silent `undefined`. In a test, provide a
-`FormEngine` yourself using the exported `FORM_ENGINE_KEY`, e.g. with
-`@vue/test-utils`:
+`useFormEngine()` returns the engine of the form the component is in. It
+throws if called outside a `FormRenderer`'s subtree — a clear failure the first
+time a component is mounted standalone (Storybook, an isolated test), rather
+than a silent `undefined`. In a test, provide a `FormEngine` yourself using the
+exported `FORM_ENGINE_KEY`, e.g. with `@vue/test-utils`:
 
 ```ts
 import { FORM_ENGINE_KEY } from '@octarine/form-engine'
@@ -148,116 +162,145 @@ mount(MyField, {
 })
 ```
 
+## Setting up: `createForms`
+
+`createForms` sets up the forms of an app: the field types they render, and
+what every form shares. `app.use(forms)` makes it the setup of every component
+below.
+
+```ts
+const forms = createForms({
+  fields: [textField, checkboxField, repeatField],
+  validators: { iban, workingDays }, // added to the built-in ones
+  functions: { workingDays }, // for expressions, besides age()
+  expressionLanguages: [feelLanguage], // besides 'js'
+  lists: { getList: async (name) => (await fetch(`/api/lists/${name}`)).json() },
+  translate: (key, params) => i18n.global.t(key, params),
+})
+```
+
+| Option                | What it does                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `fields`              | The field types, from `defineField`.                                                  |
+| `validators`          | Validators for every form, added to the built-in ones (same name replaces one).       |
+| `functions`           | Functions expressions can call, besides `age()`.                                      |
+| `expressionLanguages` | Languages a form can name in `definition.expressions`, besides `js`.                  |
+| `repeatTypes`         | More field types with rows (`defineField({ rows: true })` adds them already).         |
+| `lists`               | A `ListProvider` for named lists a form doesn't define itself.                        |
+| `translate`           | Puts a message key and its parameters into words. Default: English for the built-ins. |
+
+There are no global registries: two setups (two apps, or a test next to an
+app) share nothing. Without an installed setup, a form has no field types and
+only the built-in rules.
+
+**The rules are shared with the server.** `validators`, `functions`,
+`expressionLanguages` and `repeatTypes` have the same shape as the options of
+form-core's `validateSubmission`, so they belong in one module both import. A
+validator the server doesn't know lets anything through there.
+
+```ts
+// rules.ts, imported by the app and by the form service
+export const rules = { validators: { iban }, functions: { workingDays } }
+
+createForms({ ...rules, fields }) // the app
+validateSubmission(definition, model, rules) // the server
+```
+
+### Field types: `defineField`
+
+A field type is a component with the contract above, under the `type` string a
+definition uses:
+
+```ts
+defineField({
+  type: 'text',
+  component: TextField,
+  // The field's own properties, for editors and the definition schema.
+  schema: { properties: { maxLength: { type: 'integer', minimum: 1 } } },
+})
+defineField({ type: 'travellers', component: TravellersField, rows: true })
+```
+
+`rows: true` says the field's `components` are the fields of each row, as for
+the built-in `repeat` type: paths inside it are relative to the row, and
+labels, screen order and `isHidden` follow the rows. Any form JSON with
+`{ type: "travellers", path: "people" }` then renders it, with no changes to
+`FormRenderer` or `FormComponent`. A type nobody declared logs a warning and
+renders nothing.
+
+### Validators: `defineValidator`
+
+A plain function is a validator. `defineValidator` also says which parameters
+its rule takes, the same way a field type does:
+
+```ts
+const workingDays = defineValidator({
+  schema: { properties: { max: { type: 'integer' } }, required: ['max'] },
+  validate: ({ value, rule }) => ({
+    valid: countWorkingDays(value) <= Number(rule.max),
+    key: 'myApp.workingDays',
+    params: { max: rule.max },
+  }),
+})
+```
+
+The built-in validators (`builtInValidators`) declare theirs too.
+
 ## The form
+
+`useForm(definition, options)` makes a form with the app's setup, and
+`<FormRenderer :form>` renders it:
+
+```vue
+<script setup lang="ts">
+const props = defineProps<{ definition: FormDefinition; saved?: Record<string, unknown> }>()
+const form = useForm(() => props.definition, {
+  model: () => props.saved,
+  locale: () => i18n.locale.value,
+  validators: { onlyHere }, // added to the app's, for this form only
+})
+</script>
+
+<template>
+  <FormRenderer :form="form" aria-label="Contact details" @submit="send" @invalid="show">
+    <template #before="{ engine }">
+      <!-- e.g. an error summary -->
+    </template>
+    <OButton type="submit">Send</OButton>
+  </FormRenderer>
+</template>
+```
+
+Pass refs or getters to follow changes:
+
+- a changed **definition** (a new object, or edits inside it, as in a builder's
+  preview) makes a new engine that keeps the values filled in so far;
+- a changed **model** starts over with those values;
+- a changed **locale** switches the language in place; what was filled in stays.
+
+The definition and the model are compared by content, so a template that
+builds them inline (`:model="{}"`) doesn't reset the form on every render.
+Because a change can replace the engine, `useForm` returns a ref:
+`form.value.submit()` in a script, `:form="form"` in a template.
+
+**The app's model is never changed.** The engine works on a copy; read the
+values from `form.value.model`, or from the `submit` event, which gets a plain
+copy.
 
 `FormRenderer` renders a `<form novalidate>`: the engine validates, not the
 browser. Sending it (a submit button, Enter in a field) calls `engine.submit()`
 and emits either `submit`, with a plain copy of the values, or `invalid`, with
 the errors in screen order. Attributes like `aria-label` or `class` go to the
-`<form>`.
+`<form>`. The `before` slot sits above the fields and the default slot below
+them; both get the `engine`. The component also exposes `engine` and
+`submit()`, for a button outside the form.
 
-```vue
-<FormRenderer
-  :definition="definition"
-  :model="model"
-  :locale="locale"
-  aria-label="Contact details"
-  @submit="send"
-  @invalid="(errors) => (summary = errors)"
->
-  <template #before="{ engine }">
-    <!-- e.g. an error summary -->
-  </template>
-  <OButton type="submit">Send</OButton>
-</FormRenderer>
-```
+For a quick form, `FormRenderer` also takes `definition`, `model` and `locale`
+props and calls `useForm` itself.
 
-The `before` slot sits above the fields and the default slot below them; both
-get the `engine`. The component also exposes `engine` and `submit()`, for a
-button outside the form.
-
-It follows its props:
-
-- **`locale`** switches the language in place; what was filled in stays.
-- **`definition`** changes (a new object, or edits inside it, as in a builder's
-  preview) make a new engine that keeps the values filled in so far.
-- **`model`** changes start over with those values.
-
-Both are compared by content, so a template that builds them inline
-(`:model="{}"`) doesn't reset the form on every render. The engine copies the
-model it is given and never writes into it; read the values from the `submit`
-event or `engine.model`.
-
-## How resolution works
-
-`FormComponent.vue` looks up `registry[field.type]` for every field and renders
-whatever it finds via `<component :is="...">`:
-
-```ts
-const registry = inject(REGISTRY_KEY, getGlobalRegistry())
-function resolve(type: string) {
-  return registry[type] // e.g. registry["text"] → TextField
-}
-```
-
-`registry` is just `Record<string, Component>` — a flat map from the `type`
-string used in your JSON to a Vue component. So `{ type: "text", path:
-"firstName" }` resolves to whatever is registered under the key `"text"`. If
-nothing is registered for a given type, a dev-mode warning is logged and that
-field renders nothing.
-
-## Registering components
-
-There are three ways to put a component into that map.
-
-### 1. Global, from anywhere (simplest)
-
-`registerComponent`/`registerComponents` mutate a module-level registry
-singleton:
-
-```ts
-import { registerComponent, registerComponents } from '@octarine/form-engine'
-import { fields } from '@octarine/forms'
-
-registerComponents(fields)
-registerComponent('myCustomType', MyCustomField)
-```
-
-Call this once, anywhere before your forms mount (e.g. the top of `main.ts`).
-
-### 2. As a Vue plugin
-
-Same effect, `app.use()`-idiomatic:
-
-```ts
-import { createFormRendererPlugin } from '@octarine/form-engine'
-import { fields } from '@octarine/forms'
-
-app.use(createFormRendererPlugin({ components: fields }))
-```
-
-### 3. Scoped to one `<FormRenderer>` instance
-
-Pass a `components` prop; it merges on top of the global registry (via
-`provide`), scoped to that instance's subtree only — it won't leak to other
-forms on the page. Handy for Storybook, tests, or overriding a single field
-type locally:
-
-```vue
-<FormRenderer :form-engine="engine" :components="fields" />
-```
-
-## Adding a new field type
-
-A field type is a component with the contract above, registered under the
-`type` string your JSON uses:
-
-```ts
-registerComponent('date', DateField)
-```
-
-Then any form JSON with `{ type: "date", path: "birthDate" }` renders it, with
-no changes to `FormRenderer` or `FormComponent`.
+Without Vue's setup (a test, a script), `forms.createEngine(definition, options)`
+or `new FormEngine(definition, { model, locale, fields, validators, … })` makes
+an engine directly.
 
 ## Layout
 
@@ -401,14 +444,16 @@ for (`isEmpty` handles arrays, booleans, dates, and numbers correctly, not just
 `""`/`null`/`undefined`):
 
 ```ts
-import { registerValidator } from '@octarine/form-engine'
+import type { Validator } from '@octarine/form-engine'
 
-registerValidator('minLength', ({ value, rule, isEmpty }) => {
+export const minWords: Validator = ({ value, rule, isEmpty }) => {
   if (isEmpty) return { valid: true }
-  const min = rule.value as number
-  const ok = typeof value === 'string' && value.length >= min
-  return ok ? { valid: true } : { valid: false, key: 'myApp.validation.minLength', params: { min } }
-})
+  const min = Number(rule.value)
+  const ok = String(value).trim().split(/s+/).length >= min
+  return ok ? { valid: true } : { valid: false, key: 'myApp.validation.minWords', params: { min } }
+}
+
+createForms({ validators: { minWords }, fields })
 ```
 
 `isEmpty` is derived from `value` (via a getter), not something you or
@@ -417,26 +462,22 @@ with a stale or incorrect `isEmpty`. For the common case of "skip entirely
 when empty," wrap the validator instead of repeating the check:
 
 ```ts
-import { registerValidator, skipWhenEmpty } from '@octarine/form-engine'
+import { skipWhenEmpty } from '@octarine/form-engine'
 
-registerValidator(
-  'even',
-  skipWhenEmpty(({ value }) => ({ valid: Number(value) % 2 === 0, key: 'myApp.validation.even' })),
-)
+export const even = skipWhenEmpty(({ value }) => ({
+  valid: Number(value) % 2 === 0,
+  key: 'myApp.validation.even',
+}))
 ```
 
-A validator the server doesn't know lets anything through there, so register
-custom validators in a module that the app and the server both import.
+A validator the server doesn't know lets anything through there, so keep
+custom validators in a module that the app and the server both import (see
+[`createForms`](#setting-up-createforms)).
 
-`engine.getError(path)` puts a result into words with the `TranslationProvider`.
-By default that is `defaultTranslationProvider`, which ships English text for
-the built-in validators' keys (`formRenderer.validation.required`, …) and
-otherwise echoes the key back. A host app replaces it with a real integration
-(e.g. bridging to vue-i18n) via `provideFormRendererServices({ translationProvider })` —
-`FormRenderer.vue` picks that up automatically through `useTranslation()` and
-threads it into any `FormEngine` it constructs from a `definition` prop. If
-you construct your own `FormEngine` directly, pass the provider as the fourth
-constructor argument yourself.
+`engine.getError(path)` puts a result into words with `translate` (see
+[`createForms`](#setting-up-createforms)). By default that ships English text
+for the built-in validators' keys (`formRenderer.validation.required`, …) and
+otherwise echoes the key back.
 
 A rule can also carry its own `message`, which wins over the validator's key.
 It is localised like a label: a key in the form's `localisations`, or literal
@@ -448,21 +489,8 @@ validations: {
 }
 ```
 
-For one-off rules scoped to a single form (rather than registered globally),
-pass a validator map as the third `FormEngine` constructor argument — it's
-merged on top of the global registry for that instance only:
-
-```ts
-new FormEngine(definition, model, {
-  evenLength: ({ value, isEmpty }) =>
-    isEmpty || (typeof value === 'string' && value.length % 2 === 0)
-      ? { valid: true }
-      : { valid: false, key: 'myApp.validation.evenLength' },
-})
-```
-
-`FormRenderer.vue` also accepts a `validators` prop for the same per-instance
-override, scoped to a single `<FormRenderer>` the way `components` is.
+For rules of a single form, pass `validators` to `useForm` (or
+`createEngine`); they are added to the app's for that form only.
 
 Validators are synchronous by design — `setValue` runs validation inline and
 the result is available immediately after the call returns. Remote/async
@@ -529,7 +557,7 @@ the model paths an expression reads (`dependencies`), for editors and the
 builder.
 
 An `age(birthDate)` helper and `env.language` (the current locale) are always
-available to expressions:
+available to expressions; `createForms({ functions })` adds more:
 
 ```ts
 {
@@ -594,12 +622,8 @@ scope (the row inside a repeat, the whole model with `root: true`), the
 functions an expression can call (`age()`), `env`, the fallbacks when an
 expression fails, and caching compiled expressions by source.
 
-Register extra languages for every `FormRenderer` below a component; one named
-`"js"` replaces the built-in one:
-
-```ts
-provideFormRendererServices({ expressionLanguages: [feelLanguage] })
-```
+Add languages with `createForms({ expressionLanguages: [feelLanguage] })`; one
+named `"js"` replaces the built-in one.
 
 A form that names a language nobody registered fails when its `FormEngine` is
 created, instead of quietly falling back on every condition.
@@ -628,8 +652,7 @@ dotted-path nesting the same way form-model paths use:
 
 `FormEngine.localise("Button.Label")` (and the `useLocalizedString` composable,
 which wraps it in a `computed`) resolves against the active locale — an
-explicit `locale` constructor/`FormRenderer` prop (or `engine.setLocale()`
-later), else `localisations.default`,
+explicit `locale` option (or `engine.setLocale()` later), else `localisations.default`,
 else `""`. `useLocalizedString` takes a **getter**, not a plain value —
 `useLocalizedString(() => props.field.label)`, not
 `useLocalizedString(props.field.label)` — so it re-reads the current value on
@@ -640,8 +663,8 @@ already mounted (e.g. a WYSIWYG builder's properties panel editing
 is itself
 resolved against the same table (self-referential, capped at 5 levels deep so
 a circular reference can't hang). If the key isn't in the form's own table at
-all, resolution falls through to the injected `TranslationProvider` (see
-`provideFormRendererServices`), and finally to the raw key itself — so an
+all, resolution falls through to `translate` (see
+[`createForms`](#setting-up-createforms)), and finally to the raw key itself — so an
 unresolved key is never worse than showing the literal text an author wrote.
 
 **Switch/case labels.** A field's `label` (and a select option's `label`) isn't
@@ -703,9 +726,9 @@ automatically by every composable (`useField`, `useLocalizedString`) and
 by `FormComponent`'s own `hide` check. Nothing about the field wrapper itself
 changes — it's still just `{ field }`, exactly like a non-repeated field.
 
-**`FormRows`** renders the rows. A repeat component (registered under
-`"repeat"`; the engine recognises repeats by that type) only adds how it looks
-and the Add/Remove buttons:
+**`FormRows`** renders the rows. A repeat component (`defineField({ type:
+'repeat', component, rows: true })`, or any type with `rows: true`) only adds
+how it looks and the Add/Remove buttons:
 
 ```vue
 <script setup lang="ts">
@@ -752,19 +775,19 @@ row's own fields as scope** — `hide: "type !== 'x'"` means _this row's_
 "...", root: true }` is the escape hatch back to the whole model (e.g. to
 compare a row's field against something elsewhere on the form).
 
-`FormEngine.resolveCondition()`/`localise()` do accept a `RepeatContext` as
-their own last argument — but that's for `FormEngine`'s internal recursion
-(`validateModel`, `localise`'s own switch/case resolution) and for tests, not
-for components. `useFormEngine()` is the one place ambient context gets
-resolved: inside a repeated row it transparently returns a wrapped engine
-whose `resolveCondition(condition)`/`localise(key)` already close over the
-current `RepeatContext`, so every call site — a field wrapper's `:disabled`,
-`FormComponent`'s own `hide` check — stays the exact same two-argument call it
-would be outside a repeat. There's no third argument to remember to thread
-through, and no bug class where some component forgot to forward it (the
-single worst inconsistency in the legacy system, which threaded
-`arrayPath`/`arrayIndex` through as props and had several list variants forget
-to pass them on correctly).
+**The row is explicit.** `useFormEngine()` returns the engine itself, not
+one scoped to the row. `resolveCondition()` and `localise()` take the row as
+their last argument, and a component inside a row passes
+`useRepeatContext()`:
+
+```ts
+const engine = useFormEngine()
+const row = useRepeatContext()
+const locked = computed(() => engine.resolveCondition(props.field.locked, false, row))
+```
+
+`useField`, `useLocalizedString` and `FormComponent` already do this, so a
+field built on `useField` never has to.
 
 Validation works the same way, but it's resolved differently — see
 [Validation](#validation): rules for a repeated field live at
@@ -828,12 +851,8 @@ an inline array resolves immediately, a string name starts as `[]` and updates
 once `formEngine.getList(name)` resolves.
 
 ```ts
-import { provideFormRendererServices } from '@octarine/form-engine'
-
-provideFormRendererServices({
-  listProvider: {
-    getList: async (name) => (await fetch(`/api/lists/${name}`)).json(),
-  },
+createForms({
+  lists: { getList: async (name) => (await fetch(`/api/lists/${name}`)).json() },
 })
 ```
 
@@ -877,8 +896,5 @@ it does add is `isConstant(path): boolean`, so a constant-backed field can be
 made non-editable automatically rather than letting a user edit something
 that'll be silently discarded server-side:
 
-```ts
-:disabled="formEngine.resolveCondition(field.disabled) || formEngine.isConstant(path)"
-```
-
-Every field in `@octarine/forms` will do this.
+`useField`'s `disabled` is true for a constant, so a field built on it does
+this already.

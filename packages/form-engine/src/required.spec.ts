@@ -60,7 +60,7 @@ describe('isRequired', () => {
         ],
         validations: { 'items.*.reason': [{ type: 'required', condition: "kind === 'other'" }] },
       },
-      { items: [{ kind: 'book' }, { kind: 'other' }] },
+      { model: { items: [{ kind: 'book' }, { kind: 'other' }] } },
     )
     expect(engine.isRequired('items.0.reason')).toBe(false)
     expect(engine.isRequired('items.1.reason')).toBe(true)
@@ -77,14 +77,14 @@ describe('rule conditions and env', () => {
   })
 
   it('is required and validated when the condition on env holds', () => {
-    const engine = new FormEngine(definition(), {}, undefined, undefined, 'fr')
+    const engine = new FormEngine(definition(), { model: {}, locale: 'fr' })
     expect(engine.isHidden('vatNumber')).toBe(false)
     expect(engine.isRequired('vatNumber')).toBe(true)
     expect(engine.submit()).toBe(false)
   })
 
   it('is not required when it does not', () => {
-    const engine = new FormEngine(definition(), {}, undefined, undefined, 'nl')
+    const engine = new FormEngine(definition(), { model: {}, locale: 'nl' })
     expect(engine.isRequired('vatNumber')).toBe(false)
   })
 })

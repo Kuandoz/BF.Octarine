@@ -33,8 +33,9 @@ Options:
 | Option                | What it does                                                                     |
 | --------------------- | -------------------------------------------------------------------------------- |
 | `validators`          | Validators to add to the built-in ones; one with the same name replaces it.      |
+| `repeatTypes`         | Field types with rows besides `repeat`, so their row fields are known.           |
 | `expressionLanguages` | Languages a form can name in `definition.expressions`, besides `js`.             |
-| `functions`           | The functions expressions can call (default: `age()`).                           |
+| `functions`           | Functions expressions can call, besides `age()`.                                 |
 | `env`                 | Facts about where the form runs, available as `env` in expressions (`language`). |
 
 Register custom validators and functions in a module that the app and the server both import: a
@@ -54,15 +55,15 @@ const result = await validator.validate(definition, model)
 
 ## What else is in it
 
-| Export                                                  | What it does                                                                                                                  |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `FormValidator`                                         | A form's rules over a model you pass in: `validatePath`, `validateAll`, `isRequired`, `resolveCondition`. The engine uses it. |
-| `registerValidator`, `skipWhenEmpty`, `isEmpty`         | The built-in validators' registry and helpers. See the form-engine README for writing one.                                    |
-| `jsLanguage`, `ExpressionService`, `ExpressionError`    | The built-in `js` expression language, and condition resolving with its fallbacks.                                            |
-| `getProperty`, `setProperty`, `resolvePathContext`, …   | Dot-paths into a model, and which segments are rows (`items.2.name` → `items.*.name`).                                        |
-| `collectHideConditions`, `collectFields`, `findClosest` | What the definition says about a path: the `hide` conditions on the way to it, its field.                                     |
-| `LocalisationService`, `ListService`                    | A form's own texts and lists.                                                                                                 |
-| `defaultTranslationProvider`                            | English text for the built-in validators' keys.                                                                               |
+| Export                                                             | What it does                                                                                                                  |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `FormValidator`                                                    | A form's rules over a model you pass in: `validatePath`, `validateAll`, `isRequired`, `resolveCondition`. The engine uses it. |
+| `builtInValidators`, `defineValidator`, `skipWhenEmpty`, `isEmpty` | The validators every form has, and helpers for writing your own (see the form-engine README).                                 |
+| `jsLanguage`, `ExpressionService`, `ExpressionError`               | The built-in `js` expression language, and condition resolving with its fallbacks.                                            |
+| `getProperty`, `setProperty`, `resolvePathContext`, …              | Dot-paths into a model, and which segments are rows (`items.2.name` → `items.*.name`).                                        |
+| `collectHideConditions`, `collectFields`, `findClosest`            | What the definition says about a path: the `hide` conditions on the way to it, its field.                                     |
+| `LocalisationService`, `ListService`                               | A form's own texts and lists.                                                                                                 |
+| `defaultTranslationProvider`                                       | English text for the built-in validators' keys.                                                                               |
 
 ## Rules for this package
 

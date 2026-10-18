@@ -29,7 +29,16 @@ export interface ValidatorContext {
   scope: Record<string, unknown>
 }
 
-export type Validator = (context: ValidatorContext) => ValidatorResult
+// A JSON Schema, as plain data. The schema for form definitions (step 5 in
+// HANDOFF.md) is put together from the ones fields and validators declare.
+export type JsonSchema = { [keyword: string]: unknown }
+
+export interface Validator {
+  (context: ValidatorContext): ValidatorResult
+  // The rule's own parameters (`value`, `values`, …) as the properties of
+  // an object schema, e.g. `{ properties: { value: { type: 'number' } } }`.
+  readonly schema?: JsonSchema
+}
 
 export type ValidatorRegistry = Record<string, Validator>
 

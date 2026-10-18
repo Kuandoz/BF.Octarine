@@ -62,7 +62,7 @@ describe('when errors are shown', () => {
   })
 
   it('submits when every required value is there', () => {
-    const engine = new FormEngine(definition, { email: 'ada@example.com', name: 'Ada' })
+    const engine = new FormEngine(definition, { model: { email: 'ada@example.com', name: 'Ada' } })
     expect(engine.submit()).toBe(true)
   })
 
@@ -82,8 +82,7 @@ describe('when errors are shown', () => {
         components: [{ type: 'text', path: 'code' }],
         validations: { code: [{ type: 'silent' }] },
       },
-      {},
-      { silent: () => ({ valid: false }) },
+      { model: {}, validators: { silent: () => ({ valid: false }) } },
     )
     engine.touch('code')
     expect(engine.getError('code')).toBe("This value isn't valid.")
@@ -111,13 +110,13 @@ describe('getErrors', () => {
   const model = () => ({ items: Array.from({ length: 11 }, () => ({})) })
 
   it('lists nothing before errors are shown', () => {
-    const engine = new FormEngine(definition, model())
+    const engine = new FormEngine(definition, { model: model() })
     engine.validateModel()
     expect(engine.getErrors()).toEqual([])
   })
 
   it('lists shown errors in the order the fields appear, rows in order, unrendered paths last', () => {
-    const engine = new FormEngine(definition, model())
+    const engine = new FormEngine(definition, { model: model() })
     engine.submit()
     const paths = engine.getErrors().map((error) => error.path)
     expect(paths).toEqual([
@@ -134,7 +133,7 @@ describe('getErrors', () => {
   })
 
   it('lists only touched fields before a submit', () => {
-    const engine = new FormEngine(definition, model())
+    const engine = new FormEngine(definition, { model: model() })
     engine.touch('email')
     expect(engine.getErrors()).toEqual([
       { path: 'email', message: 'This field is required.', label: '' },
@@ -142,7 +141,7 @@ describe('getErrors', () => {
   })
 
   it('forgets the errors of a removed row', () => {
-    const engine = new FormEngine(definition, { items: [{}, {}] })
+    const engine = new FormEngine(definition, { model: { items: [{}, {}] } })
     engine.submit()
     engine.removeRepeatItem('items', 1)
     expect(engine.getErrors().map((error) => error.path)).not.toContain('items.1.title')
@@ -193,7 +192,7 @@ describe('what an error says about its field', () => {
   }
 
   it('gives the localised label of the field, and of the group for a nested path', () => {
-    const engine = new FormEngine(definition, { items: [{}] }, validators)
+    const engine = new FormEngine(definition, { model: { items: [{}] }, validators: validators })
     expect(engine.getLabel('name')).toBe('Name')
     expect(engine.getLabel('address')).toBe('Address')
     expect(engine.getLabel('address.zip')).toBe('Address')
@@ -205,7 +204,7 @@ describe('what an error says about its field', () => {
   })
 
   it('says what a hidden field is about, without a target to jump to', () => {
-    const engine = new FormEngine(definition, { phone: 'abc' }, validators)
+    const engine = new FormEngine(definition, { model: { phone: 'abc' }, validators: validators })
     engine.submit()
     expect(engine.isHidden('phone')).toBe(true)
     expect(engine.getErrors().find((error) => error.path === 'phone')).toEqual({
@@ -225,7 +224,7 @@ describe('what an error says about its field', () => {
   })
 
   it('targets the first control on screen inside a group without its own', () => {
-    const engine = new FormEngine(definition, {}, validators)
+    const engine = new FormEngine(definition, { model: {}, validators: validators })
     engine.registerField('address.city', 'city')
     engine.registerField('address.street', 'street')
     engine.submit()
@@ -238,7 +237,7 @@ describe('what an error says about its field', () => {
   })
 
   it("targets a group's own control when it registered one, like a repeat's Add button", () => {
-    const engine = new FormEngine(definition, { items: [{}] })
+    const engine = new FormEngine(definition, { model: { items: [{}] } })
     engine.registerField('items.0.title', 'title')
     engine.registerField('items', 'add')
     expect(engine.getFieldId('items')).toBe('add')
@@ -246,7 +245,7 @@ describe('what an error says about its field', () => {
   })
 
   it('updates the error of a group when a value inside it changes', () => {
-    const engine = new FormEngine(definition, {}, validators)
+    const engine = new FormEngine(definition, { model: {}, validators: validators })
     engine.submit()
     expect(engine.getError('address')).toBe('Fill in a street or a city.')
     engine.setValue('address.city', 'Gent')

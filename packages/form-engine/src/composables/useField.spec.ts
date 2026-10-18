@@ -38,7 +38,7 @@ const definition: FormDefinition = {
 
 describe('useField', () => {
   it('reads and writes the value at its path', () => {
-    const engine = new FormEngine(definition, { firstName: 'Ada' })
+    const engine = new FormEngine(definition, { model: { firstName: 'Ada' } })
     const { field } = setup(engine, { type: 'text', path: 'firstName' })
     expect(field.path.value).toBe('firstName')
     expect(field.value.value).toBe('Ada')
@@ -47,7 +47,7 @@ describe('useField', () => {
   })
 
   it('resolves its path against the row it is in', () => {
-    const engine = new FormEngine(definition, { items: [{}, { title: 'b' }] })
+    const engine = new FormEngine(definition, { model: { items: [{}, { title: 'b' }] } })
     const { field } = setup(
       engine,
       { type: 'text', path: 'title' },
@@ -73,7 +73,7 @@ describe('useField', () => {
   })
 
   it('follows required-if conditions', () => {
-    const engine = new FormEngine(definition, { mustName: false })
+    const engine = new FormEngine(definition, { model: { mustName: false } })
     const { field } = setup(engine, { type: 'text', path: 'firstName' })
     expect(field.required.value).toBe(false)
     engine.setValue('mustName', true)
@@ -81,7 +81,7 @@ describe('useField', () => {
   })
 
   it('evaluates disabled and readonly as conditions, and disables a constant', () => {
-    const engine = new FormEngine(definition, { locked: false })
+    const engine = new FormEngine(definition, { model: { locked: false } })
     const conditional = setup(engine, {
       type: 'text',
       path: 'firstName',
@@ -98,7 +98,7 @@ describe('useField', () => {
   })
 
   it('shows its error once left', () => {
-    const engine = new FormEngine(definition, { mustName: true })
+    const engine = new FormEngine(definition, { model: { mustName: true } })
     const { field } = setup(engine, { type: 'text', path: 'firstName' })
     expect(field.error.value).toBeUndefined()
     field.onBlur()

@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { defineComponent, type PropType, provide, shallowRef, watch } from 'vue'
+import { computed, defineComponent, type PropType, provide, shallowRef, watch } from 'vue'
 
 import FormComponent from './FormComponent.vue'
 
 import { FORM_ENGINE_KEY } from '../composables/useFormEngine'
-import { FormEngine } from '../FormEngine'
+import type { FormEngine } from '../FormEngine'
+import { useForm } from '../forms'
 import { clonePlain } from '../mergeDeep'
-import { type ComponentRegistry, getGlobalRegistry, REGISTRY_KEY } from '../registry'
-import { useExpressionLanguages, useListProvider, useTranslation } from '../services'
 import type { FormDefinition, FormError } from '../types'
-import type { ValidatorRegistry } from '../types'
 
+// Renders a form: either one from useForm (`:form`), or one it makes itself
+// from `definition`, `model` and `locale` with the app's Forms setup.
 const props = defineProps<{
+  form?: FormEngine
   definition?: FormDefinition
-  formEngine?: FormEngine
   model?: Record<string, unknown>
-  components?: ComponentRegistry
-  validators?: ValidatorRegistry
   locale?: string
 }>()
 
@@ -34,84 +32,23 @@ defineSlots<{
   default?(props: { engine: FormEngine }): unknown
 }>()
 
-const translation = useTranslation()
-const listProvider = useListProvider()
-const expressionLanguages = useExpressionLanguages()
-
-function createEngine(model: Record<string, unknown> | undefined): FormEngine {
-  if (!props.definition) {
-    throw new Error(
-      '[form-engine] FormRenderer requires either a "form-engine" or a "definition" prop.',
-    )
-  }
-  return new FormEngine(
-    props.definition,
-    model,
-    props.validators,
-    translation,
-    props.locale,
-    listProvider,
-    expressionLanguages,
-  )
+if (!props.form && !props.definition) {
+  throw new Error('[form-engine] FormRenderer needs a "form" or a "definition".')
 }
 
-// A plain copy of the values, so what an app gets doesn't change under it.
-function snapshot(engine: FormEngine): Record<string, unknown> {
-  return clonePlain(engine.model)
-}
+// Only made when there is no `form`; a `form` can't be swapped for a
+// definition later.
+const own = props.form
+  ? undefined
+  : useForm(() => props.definition!, {
+      model: () => props.model,
+      locale: () => props.locale,
+    })
+const engine = computed(() => props.form ?? own!.value)
 
-const engine = shallowRef(props.formEngine ?? createEngine(props.model))
 // The fields are mounted again for a new engine, so they pick it up.
 const generation = shallowRef(0)
-
-function switchTo(next: FormEngine) {
-  engine.value = next
-  generation.value++
-}
-
-watch(
-  () => props.formEngine,
-  (next) => {
-    if (next) switchTo(next)
-  },
-)
-// Both are compared by content: a template that builds them inline
-// (`:model="{}"`) passes a new object on every render, and that must not
-// throw away what was filled in.
-const contentOf = (value: unknown) => JSON.stringify(value ?? null)
-let lastDefinition = contentOf(props.definition)
-let lastModel = contentOf(props.model)
-
-// A changed definition, as in a builder's preview, keeps what was filled in.
-watch(
-  () => props.definition,
-  (definition) => {
-    const content = contentOf(definition)
-    if (content === lastDefinition) return
-    lastDefinition = content
-    if (!props.formEngine) switchTo(createEngine(snapshot(engine.value)))
-  },
-  { deep: true },
-)
-// A new model starts over with those values.
-watch(
-  () => props.model,
-  (model) => {
-    const content = contentOf(model)
-    if (content === lastModel) return
-    lastModel = content
-    if (!props.formEngine) switchTo(createEngine(model))
-  },
-  { deep: true },
-)
-watch(
-  () => props.locale,
-  (locale) => engine.value.setLocale(locale),
-)
-
-if (props.components) {
-  provide(REGISTRY_KEY, { ...getGlobalRegistry(), ...props.components })
-}
+watch(engine, () => generation.value++)
 
 // Gives the fields below it their engine. Keyed by `generation`, so a new
 // engine mounts them again instead of leaving them on the old one.
@@ -124,9 +61,10 @@ const EngineScope = defineComponent({
 })
 
 function submit(): boolean {
-  const valid = engine.value.submit()
-  if (valid) emit('submit', snapshot(engine.value))
-  else emit('invalid', engine.value.getErrors())
+  const current = engine.value
+  const valid = current.submit()
+  if (valid) emit('submit', clonePlain(current.model))
+  else emit('invalid', current.getErrors())
   return valid
 }
 

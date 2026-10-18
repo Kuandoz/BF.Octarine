@@ -54,8 +54,8 @@ Vue's `useId()`, and each form's error summary links to its own fields.
 
 ## Writing a field component
 
-A component is registered under the `type` a definition uses, gets the field's JSON as its one
-prop, and takes everything else from `useField`:
+A component is declared with `defineField` under the `type` a definition uses, gets the field's
+JSON as its one prop, and takes everything else from `useField`:
 
 ```vue
 <script setup lang="ts">
@@ -79,6 +79,31 @@ const { id, value, label, hint, required, disabled, readonly, error, onBlur } = 
   >
     <OInput v-model="value" :readonly="readonly" @blur="onBlur" />
   </OField>
+</template>
+```
+
+An app sets up its field types once, with the validators and functions every form shares, and
+renders a form with `useForm`:
+
+```ts
+// main.ts
+const forms = createForms({
+  fields: [
+    defineField({ type: 'text', component: TextField }),
+    defineField({ type: 'repeat', component: RepeatField, rows: true }),
+  ],
+  validators,
+})
+app.use(forms)
+```
+
+```vue
+<script setup lang="ts">
+const form = useForm(definition, { model: { name: 'Ada' } })
+</script>
+
+<template>
+  <FormRenderer :form="form" @submit="send" />
 </template>
 ```
 

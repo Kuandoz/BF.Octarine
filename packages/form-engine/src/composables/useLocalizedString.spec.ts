@@ -35,7 +35,7 @@ describe('useLocalizedString', () => {
   })
 
   it('resolves a switch/case label object reactively as the model changes', () => {
-    const engine = new FormEngine(definition, { isSaving: false })
+    const engine = new FormEngine(definition, { model: { isSaving: false } })
     const label = withFormEngine(engine, () =>
       useLocalizedString(() => ({ 'Button.Saving': 'isSaving', 'Button.Label': 'true' })),
     )

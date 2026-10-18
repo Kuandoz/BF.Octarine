@@ -9,9 +9,9 @@ import FormRows from './FormRows.vue'
 
 import { useField } from '../composables/useField'
 import type { FormEngine } from '../FormEngine'
-import type { ComponentRegistry } from '../registry'
-import type { FieldDefinition, FormDefinition } from '../types'
-import type { ValidatorRegistry } from '../types'
+import { defineField, type FieldType } from '../fields'
+import { createForms, useForm } from '../forms'
+import type { FieldDefinition, FormDefinition, ValidatorRegistry } from '../types'
 
 // Two forms on one page that capture the same paths (two people, a billing
 // and a shipping address) must not share anything: model, errors, touched
@@ -46,7 +46,12 @@ const RepeatField = defineComponent({
     h('div', { class: 'repeat' }, [h(FormRows, { field: props.field as FieldDefinition })]),
 })
 
-const components = { text: TextField, repeat: RepeatField }
+const forms = createForms({
+  fields: [
+    defineField({ type: 'text', component: TextField }),
+    defineField({ type: 'repeat', component: RepeatField, rows: true }),
+  ],
+})
 
 const personForm = (): FormDefinition => ({
   components: [
@@ -56,25 +61,28 @@ const personForm = (): FormDefinition => ({
   validations: { 'person.name': [{ type: 'required' }] },
 })
 
-interface RendererProps {
+interface FormProps {
   definition: FormDefinition
   model?: Record<string, unknown>
   locale?: string
-  components?: ComponentRegistry
+  // Field types and validators for this form only, on top of the app's.
+  fields?: Record<string, FieldType>
   validators?: ValidatorRegistry
 }
 
-function mountTwo(a: RendererProps, b: RendererProps = a) {
+function mountTwo(a: FormProps, b: FormProps = a) {
   const wrapper = mount(
     defineComponent({
       setup() {
+        const formA = useForm(a.definition, a)
+        const formB = useForm(b.definition, b)
         return () => [
-          h('section', { id: 'a' }, [h(FormRenderer, { components, ...a, ref: 'a' })]),
-          h('section', { id: 'b' }, [h(FormRenderer, { components, ...b, ref: 'b' })]),
+          h('section', { id: 'a' }, [h(FormRenderer, { form: formA.value, ref: 'a' })]),
+          h('section', { id: 'b' }, [h(FormRenderer, { form: formB.value, ref: 'b' })]),
         ]
       },
     }),
-    { attachTo: document.body },
+    { attachTo: document.body, global: { plugins: [forms] } },
   )
   const engineOf = (ref: 'a' | 'b') => (wrapper.vm.$refs[ref] as { engine: FormEngine }).engine
   return {
@@ -231,7 +239,7 @@ describe('two forms on one page', () => {
     wrapper.unmount()
   })
 
-  it('use components passed to one form only in that form', () => {
+  it('use field types passed to one form only in that form', () => {
     const Fancy = defineComponent({
       props: ['field'],
       setup: () => () => h('div', { class: 'fancy' }),
@@ -240,7 +248,7 @@ describe('two forms on one page', () => {
       components: [{ type: 'fancy', path: 'person.name' }],
     })
     const { wrapper, a, b } = mountTwo(
-      { definition: definition(), components: { ...components, fancy: Fancy } },
+      { definition: definition(), fields: { fancy: { type: 'fancy', component: Fancy } } },
       { definition: definition() },
     )
 

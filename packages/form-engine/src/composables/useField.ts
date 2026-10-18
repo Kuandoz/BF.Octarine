@@ -98,17 +98,24 @@ export function useField<T = unknown>(
     set: (newValue) => engine.setValue(path.value, newValue),
   })
   const label = computed(() =>
-    definition.value.label === undefined ? '' : engine.localise(definition.value.label),
+    definition.value.label === undefined
+      ? ''
+      : engine.localise(definition.value.label, repeatContext),
   )
   const hint = computed(() =>
-    definition.value.hint === undefined ? undefined : engine.localise(definition.value.hint),
+    definition.value.hint === undefined
+      ? undefined
+      : engine.localise(definition.value.hint, repeatContext),
   )
   const required = computed(() => engine.isRequired(path.value))
   const disabled = computed(
     () =>
-      engine.resolveCondition(definition.value.disabled, false) || engine.isConstant(path.value),
+      engine.resolveCondition(definition.value.disabled, false, repeatContext) ||
+      engine.isConstant(path.value),
   )
-  const readonly = computed(() => engine.resolveCondition(definition.value.readonly, false))
+  const readonly = computed(() =>
+    engine.resolveCondition(definition.value.readonly, false, repeatContext),
+  )
   const error = computed(() => engine.getError(path.value))
   const attrs = computed(() => {
     const result: Record<string, unknown> = {}

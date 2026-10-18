@@ -3,14 +3,13 @@ import { describe, expect, it } from 'vitest'
 import type { ValidationRule } from '@octarine/form-abstractions'
 import {
   createValidatorContext,
-  getGlobalValidatorRegistry,
+  builtInValidators,
+  defineValidator,
   isEmpty,
-  registerValidator,
-  registerValidators,
   skipWhenEmpty,
 } from './validators'
 
-const registry = getGlobalValidatorRegistry()
+const registry = builtInValidators
 
 function run(
   type: string,
@@ -71,25 +70,32 @@ describe('isEmpty', () => {
   })
 })
 
-describe('global validator registry', () => {
-  it('ships a built-in required validator', () => {
-    expect(getGlobalValidatorRegistry().required).toBeTypeOf('function')
+describe('built-in validators', () => {
+  it('include required', () => {
+    expect(builtInValidators.required).toBeTypeOf('function')
   })
 
-  it('registerValidator adds a single validator', () => {
-    registerValidator('alwaysValid', () => ({ valid: true }))
-    expect(getGlobalValidatorRegistry().alwaysValid).toBeTypeOf('function')
+  it("can't be changed from outside: a form adds its own with the validators option", () => {
+    expect(Object.isFrozen(builtInValidators)).toBe(true)
   })
 
-  it('registerValidators adds a batch of validators', () => {
-    registerValidators({
-      alwaysInvalid: () => ({ valid: false, key: 'nope' }),
+  it('say which parameters their rule takes', () => {
+    expect(builtInValidators.minLength!.schema).toEqual({
+      properties: { value: { type: 'integer', minimum: 0 } },
+      required: ['value'],
     })
-    const context = createValidatorContext(undefined, { type: 'alwaysInvalid' }, 'someField')
-    expect(getGlobalValidatorRegistry().alwaysInvalid!(context)).toEqual({
-      valid: false,
-      key: 'nope',
+    expect(builtInValidators.required!.schema).toBeUndefined()
+  })
+})
+
+describe('defineValidator', () => {
+  it('gives a validator its parameter schema', () => {
+    const even = defineValidator({
+      schema: { properties: { strict: { type: 'boolean' } } },
+      validate: ({ value }) => ({ valid: Number(value) % 2 === 0 }),
     })
+    expect(even.schema).toEqual({ properties: { strict: { type: 'boolean' } } })
+    expect(even(createValidatorContext(3, { type: 'even' }, 'n'))).toEqual({ valid: false })
   })
 })
 

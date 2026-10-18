@@ -113,3 +113,41 @@ describe('validateSubmission and missing keys', () => {
     expect(model).toEqual({ name: 'Ann' })
   })
 })
+
+describe('validateSubmission options', () => {
+  it('adds functions to age() instead of replacing it', () => {
+    const withFunctions: FormDefinition = {
+      components: [],
+      validations: {
+        note: [{ type: 'required', condition: 'isLong(code) && age(born) >= 18' }],
+      },
+    }
+    const result = validateSubmission(
+      withFunctions,
+      { code: 'abcdef', born: '1990-01-01' },
+      { functions: { isLong: (value) => String(value).length > 5 } },
+    )
+    expect(result.errors.map((error) => error.path)).toEqual(['note'])
+  })
+
+  it('declares the row fields of a repeat type the form names', () => {
+    // `callMe` exists only inside the rows of a custom repeat type: without
+    // repeatTypes it would be an unknown name, keeping the rule active.
+    const custom: FormDefinition = {
+      components: [
+        {
+          type: 'travellers',
+          path: 'people',
+          components: [
+            { type: 'checkbox', path: 'callMe' },
+            { type: 'text', path: 'phone' },
+          ],
+        },
+      ],
+      validations: { 'people.*.phone': [{ type: 'required', condition: 'callMe === true' }] },
+    }
+    const model = { people: [{}] }
+    expect(validateSubmission(custom, model).valid).toBe(false)
+    expect(validateSubmission(custom, model, { repeatTypes: ['travellers'] }).valid).toBe(true)
+  })
+})

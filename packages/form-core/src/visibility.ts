@@ -1,5 +1,7 @@
 import type { ConditionValue, FieldDefinition } from '@octarine/form-abstractions'
 
+import { DEFAULT_REPEAT_TYPES } from './pathAccessors'
+
 /** A `hide`, `disabled` or `readonly` condition, and how many repeat rows deep it is evaluated (0: the whole model). */
 export interface FieldCondition {
   condition: ConditionValue
@@ -16,8 +18,9 @@ export interface FieldCondition {
  */
 export function collectHideConditions(
   components: FieldDefinition[],
+  repeatTypes: readonly string[] = DEFAULT_REPEAT_TYPES,
 ): Map<string, FieldCondition[][]> {
-  return collectConditions(components, ['hide'])
+  return collectConditions(components, ['hide'], repeatTypes)
 }
 
 /**
@@ -27,16 +30,18 @@ export function collectHideConditions(
  */
 export function collectLockConditions(
   components: FieldDefinition[],
+  repeatTypes: readonly string[] = DEFAULT_REPEAT_TYPES,
 ): Map<string, FieldCondition[][]> {
-  return collectConditions(components, ['disabled', 'readonly'])
+  return collectConditions(components, ['disabled', 'readonly'], repeatTypes)
 }
 
 function collectConditions(
   components: FieldDefinition[],
   keys: ReadonlyArray<'hide' | 'disabled' | 'readonly'>,
+  repeatTypes: readonly string[],
 ): Map<string, FieldCondition[][]> {
   const conditions = new Map<string, FieldCondition[][]>()
-  walkFields(components, keys, (key, field, depth, chain) => {
+  walkFields(components, keys, repeatTypes, (key, field, depth, chain) => {
     conditions.set(key, [...(conditions.get(key) ?? []), chain])
   })
   return conditions
@@ -46,9 +51,12 @@ function collectConditions(
  * The first field that renders each path, in screen order, keyed like
  * collectHideConditions. For what is said about a path, like its label.
  */
-export function collectFields(components: FieldDefinition[]): Map<string, FieldDefinition> {
+export function collectFields(
+  components: FieldDefinition[],
+  repeatTypes: readonly string[] = DEFAULT_REPEAT_TYPES,
+): Map<string, FieldDefinition> {
   const fields = new Map<string, FieldDefinition>()
-  walkFields(components, [], (key, field) => {
+  walkFields(components, [], repeatTypes, (key, field) => {
     if (!fields.has(key)) fields.set(key, field)
   })
   return fields
@@ -73,6 +81,7 @@ export function findClosest<T>(entries: Map<string, T>, wildcardPath: string): T
 function walkFields(
   components: FieldDefinition[],
   keys: ReadonlyArray<'hide' | 'disabled' | 'readonly'>,
+  repeatTypes: readonly string[],
   visit: (key: string, field: FieldDefinition, depth: number, chain: FieldCondition[]) => void,
 ): void {
   const walk = (
@@ -99,7 +108,7 @@ function walkFields(
 
       // A repeat's children are relative to its rows; other containers'
       // children have their own full paths.
-      if (field.type === 'repeat') walk(children, `${key}.*`, depth + 1, chain)
+      if (repeatTypes.includes(field.type)) walk(children, `${key}.*`, depth + 1, chain)
       else walk(children, prefix, depth, chain)
     }
   }

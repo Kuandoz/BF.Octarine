@@ -31,8 +31,10 @@ describe('useResolvedList', () => {
   })
 
   it("resolves a provider-backed list once the provider's promise settles", async () => {
-    const engine = new FormEngine(definition, undefined, undefined, undefined, undefined, {
-      getList: async (name) => Promise.resolve([{ name }]),
+    const engine = new FormEngine(definition, {
+      lists: {
+        getList: async (name) => Promise.resolve([{ name }]),
+      },
     })
     const field: FieldDefinition = { type: 'select', options: 'remoteList' }
     const list = withFormEngine(engine, () => useResolvedList(field))

@@ -8,7 +8,9 @@ import FormRenderer from './FormRenderer.vue'
 import FormRows from './FormRows.vue'
 
 import { useField } from '../composables/useField'
-import { FormEngine } from '../FormEngine'
+import { defineField } from '../fields'
+import type { FormEngine } from '../FormEngine'
+import { createForms, useForm } from '../forms'
 import type { FieldDefinition, FormDefinition, FormError } from '../types'
 
 const TextField = defineComponent({
@@ -33,7 +35,16 @@ const RepeatField = defineComponent({
   props: { field: { type: Object, required: true } },
   setup: (props) => () => h(FormRows, { field: props.field as FieldDefinition }),
 })
-const components = { text: TextField, repeat: RepeatField }
+const forms = createForms({
+  fields: [
+    defineField({ type: 'text', component: TextField }),
+    defineField({ type: 'repeat', component: RepeatField, rows: true }),
+  ],
+})
+
+// Mounts with the forms installed, as an app would.
+const mountWithForms = ((component: unknown, options: Record<string, unknown> = {}) =>
+  mount(component as never, { ...options, global: { plugins: [forms] } })) as typeof mount
 
 const definition = (): FormDefinition => ({
   components: [
@@ -50,15 +61,15 @@ function engineOf(wrapper: ReturnType<typeof mount>): FormEngine {
 
 describe('FormRenderer', () => {
   it('renders a form that leaves validation to the engine', () => {
-    const wrapper = mount(FormRenderer, { props: { definition: definition(), components } })
+    const wrapper = mountWithForms(FormRenderer, { props: { definition: definition() } })
     const form = wrapper.get('form')
     expect(form.attributes('novalidate')).toBeDefined()
     expect(form.find('[data-path="name"] input').exists()).toBe(true)
   })
 
   it('passes attributes like a name to the form', () => {
-    const wrapper = mount(FormRenderer, {
-      props: { definition: definition(), components },
+    const wrapper = mountWithForms(FormRenderer, {
+      props: { definition: definition() },
       attrs: { 'aria-label': 'Contact', class: 'my-form' },
     })
     expect(wrapper.get('form').attributes('aria-label')).toBe('Contact')
@@ -66,8 +77,8 @@ describe('FormRenderer', () => {
   })
 
   it('emits invalid with the errors in screen order when a rule fails', async () => {
-    const wrapper = mount(FormRenderer, {
-      props: { definition: definition(), components },
+    const wrapper = mountWithForms(FormRenderer, {
+      props: { definition: definition() },
       attachTo: document.body,
     })
     await wrapper.get('form').trigger('submit')
@@ -87,8 +98,8 @@ describe('FormRenderer', () => {
   })
 
   it('emits submit with a plain copy of the values once every rule passes', async () => {
-    const wrapper = mount(FormRenderer, {
-      props: { definition: definition(), components, model: { items: [{ title: 'a' }] } },
+    const wrapper = mountWithForms(FormRenderer, {
+      props: { definition: definition(), model: { items: [{ title: 'a' }] } },
     })
     engineOf(wrapper).addRepeatItem('items', { title: 'b' })
     await wrapper.get('[data-path="name"] input').setValue('Ada')
@@ -103,15 +114,15 @@ describe('FormRenderer', () => {
   })
 
   it('exposes submit, for a button outside the form', () => {
-    const wrapper = mount(FormRenderer, { props: { definition: definition(), components } })
+    const wrapper = mountWithForms(FormRenderer, { props: { definition: definition() } })
     const renderer = wrapper.vm as unknown as { submit(): boolean }
     expect(renderer.submit()).toBe(false)
     expect(wrapper.emitted('invalid')).toHaveLength(1)
   })
 
   it('renders slots above and below the fields, with the engine', () => {
-    const wrapper = mount(FormRenderer, {
-      props: { definition: definition(), components },
+    const wrapper = mountWithForms(FormRenderer, {
+      props: { definition: definition() },
       slots: {
         before: ({ engine }: { engine: FormEngine }) =>
           h('p', { class: 'before' }, String(engine.submitted)),
@@ -125,8 +136,8 @@ describe('FormRenderer', () => {
 
   it('switches language without losing what was filled in', async () => {
     const locale = ref('en')
-    const wrapper = mount(() =>
-      h(FormRenderer, { definition: definition(), components, locale: locale.value }),
+    const wrapper = mountWithForms(() =>
+      h(FormRenderer, { definition: definition(), locale: locale.value }),
     )
     await wrapper.get('[data-path="name"] input').setValue('Ada')
     await wrapper.get('[data-path="name"] input').trigger('blur')
@@ -143,7 +154,7 @@ describe('FormRenderer', () => {
 
   it('takes a changed definition, keeping what was filled in', async () => {
     const current = ref(definition())
-    const wrapper = mount(() => h(FormRenderer, { definition: current.value, components }))
+    const wrapper = mountWithForms(() => h(FormRenderer, { definition: current.value }))
     await wrapper.get('[data-path="name"] input').setValue('Ada')
 
     current.value = {
@@ -162,7 +173,7 @@ describe('FormRenderer', () => {
 
   it('follows edits made inside the definition', async () => {
     const current = ref(definition())
-    const wrapper = mount(() => h(FormRenderer, { definition: current.value, components }))
+    const wrapper = mountWithForms(() => h(FormRenderer, { definition: current.value }))
     current.value.components[0]!.hide = true
     await nextTick()
     expect(wrapper.find('[data-path="name"]').exists()).toBe(false)
@@ -171,8 +182,8 @@ describe('FormRenderer', () => {
 
   it('starts over with a new model', async () => {
     const model = ref<Record<string, unknown>>({ name: 'Ada' })
-    const wrapper = mount(() =>
-      h(FormRenderer, { definition: definition(), components, model: model.value }),
+    const wrapper = mountWithForms(() =>
+      h(FormRenderer, { definition: definition(), model: model.value }),
     )
     await wrapper.get('[data-path="name"] input').trigger('blur')
 
@@ -185,10 +196,10 @@ describe('FormRenderer', () => {
 
   it('keeps its state when a parent passes an equal definition or model again', async () => {
     const count = ref(0)
-    const wrapper = mount(() =>
+    const wrapper = mountWithForms(() =>
       h('div', [
         h('span', count.value),
-        h(FormRenderer, { definition: definition(), model: { items: [] }, components }),
+        h(FormRenderer, { definition: definition(), model: { items: [] } }),
       ]),
     )
     await wrapper.get('[data-path="name"] input').setValue('Ada')
@@ -202,12 +213,12 @@ describe('FormRenderer', () => {
   })
 
   it('uses an engine it is given, and a new one when that changes', async () => {
-    const first = new FormEngine(definition(), { name: 'Ada' })
+    const first = forms.createEngine(definition(), { model: { name: 'Ada' } })
     const engine = shallowRef(first)
-    const wrapper = mount(() => h(FormRenderer, { formEngine: engine.value, components }))
+    const wrapper = mountWithForms(() => h(FormRenderer, { form: engine.value }))
     expect(engineOf(wrapper)).toBe(first)
 
-    const second = new FormEngine(definition(), { name: 'Grace' })
+    const second = forms.createEngine(definition(), { model: { name: 'Grace' } })
     engine.value = second
     await nextTick()
 
@@ -217,5 +228,23 @@ describe('FormRenderer', () => {
     )
     expect(first.getFieldId('name')).toBeUndefined()
     expect(second.getFieldId('name')).toBeDefined()
+  })
+
+  it('renders a form from useForm, with the installed field types', async () => {
+    let form: Readonly<{ value: FormEngine }> | undefined
+    const App = defineComponent({
+      setup() {
+        const own = useForm(definition(), { model: { name: 'Ada' } })
+        form = own
+        return () => h(FormRenderer, { form: own.value })
+      },
+    })
+    const wrapper = mountWithForms(App)
+    expect((wrapper.get('[data-path="name"] input').element as HTMLInputElement).value).toBe('Ada')
+    expect(engineOf(wrapper)).toBe(toRaw(form!.value))
+  })
+
+  it('needs a form or a definition', () => {
+    expect(() => mountWithForms(FormRenderer)).toThrow('needs a "form" or a "definition"')
   })
 })

@@ -1,16 +1,16 @@
 import { reactive, ref } from 'vue'
 
-import mitt from 'mitt'
-
 import {
   collectFields,
   collectHideConditions,
   collectLockConditions,
   declareFieldKeys,
+  DEFAULT_REPEAT_TYPES,
   defaultListProvider,
   defaultTranslationProvider,
   findClosest,
   FormValidator,
+  type FormValidatorOptions,
   getProperty,
   type FieldCondition,
   INVALID_KEY,
@@ -22,11 +22,10 @@ import {
   setProperty,
 } from '@octarine/form-core'
 
+import type { FieldType } from './fields'
 import { mergeDeep } from './mergeDeep'
-import { defaultExpressionLanguages } from './services'
 import type {
   ConditionValue,
-  ExpressionLanguage,
   FieldDefinition,
   FormDefinition,
   FormError,
@@ -35,11 +34,22 @@ import type {
   RepeatContext,
   TranslationProvider,
   ValidationResult,
-  ValidatorRegistry,
 } from './types'
 
-type FormEngineEvents = {
-  modelChanged: { path: string }
+export interface FormEngineOptions extends FormValidatorOptions {
+  // The values to start from. The engine works on a copy: this object is
+  // never changed. Read the values from `engine.model`, or from the
+  // FormRenderer's `submit` event.
+  model?: Record<string, unknown>
+  // The language to show; default: the form's `localisations.default`.
+  locale?: string
+  // Puts a message key and its parameters into words. Default: English text
+  // for the built-in validators' keys.
+  translate?: TranslationProvider['t']
+  // Named lists a form uses without defining them itself.
+  lists?: ListProvider
+  // The field types the form can render, by `type`.
+  fields?: Readonly<Record<string, FieldType>>
 }
 
 // The Vue side of a form: the reactive model, what was touched and
@@ -56,7 +66,7 @@ export class FormEngine {
   private _touchedPaths = reactive(new Set<string>())
   private _submitted = ref(false)
   private _translate: TranslationProvider['t']
-  private _emitter = mitt<FormEngineEvents>()
+  private _fieldTypes: Readonly<Record<string, FieldType>>
   private _validator: FormValidator
   private _localisationService: LocalisationService
   private _listService: ListService
@@ -64,24 +74,36 @@ export class FormEngine {
   private _constants: Record<string, unknown>
   private _hideConditions: Map<string, FieldCondition[][]>
   private _lockConditions: Map<string, FieldCondition[][]>
-  private _fields: Map<string, FieldDefinition>
+  private _fieldsByPath: Map<string, FieldDefinition>
   // The ids of the mounted controls for each path, in the order they were
   // mounted. Filled by useField.
   private _fieldIds = reactive(new Map<string, string[]>())
   private _locale = ref('')
 
-  constructor(
-    definition: FormDefinition,
-    initialModel: Record<string, unknown> = {},
-    validators?: ValidatorRegistry,
-    translationProvider: TranslationProvider = defaultTranslationProvider,
-    locale?: string,
-    listProvider: ListProvider = defaultListProvider,
-    expressionLanguages: readonly ExpressionLanguage[] = defaultExpressionLanguages,
-  ) {
+  constructor(definition: FormDefinition, options: FormEngineOptions = {}) {
+    const {
+      model: initialModel = {},
+      locale,
+      translate = defaultTranslationProvider.t,
+      lists = defaultListProvider,
+      fields = {},
+      ...rules
+    } = options
+    // `repeat` always has rows; field types declared with `rows: true` too.
+    const repeatTypes = [
+      ...new Set([
+        ...DEFAULT_REPEAT_TYPES,
+        ...Object.values(fields)
+          .filter((field) => field.rows)
+          .map((field) => field.type),
+        ...(rules.repeatTypes ?? []),
+      ]),
+    ]
+
     this.definition = definition
     this._defaults = definition.defaults ?? {}
-    this._translate = translationProvider.t
+    this._translate = translate
+    this._fieldTypes = fields
     this._constants = definition.constants ?? {}
 
     const isEmptyModel = Object.keys(initialModel).length === 0
@@ -89,19 +111,17 @@ export class FormEngine {
     mergeDeep(seeded, this._constants)
     if (isEmptyModel) mergeDeep(seeded, this._defaults)
     mergeDeep(seeded, initialModel)
-    declareFieldKeys(definition.components, seeded)
+    declareFieldKeys(definition.components, seeded, repeatTypes)
     this._model = reactive(seeded)
 
-    this._validator = new FormValidator(definition, { validators, expressionLanguages })
-    this._localisationService = new LocalisationService(
-      definition.localisations,
-      locale,
-      translationProvider,
-    )
-    this._listService = new ListService(definition.lists, listProvider)
-    this._hideConditions = collectHideConditions(definition.components)
-    this._lockConditions = collectLockConditions(definition.components)
-    this._fields = collectFields(definition.components)
+    this._validator = new FormValidator(definition, { ...rules, repeatTypes })
+    this._localisationService = new LocalisationService(definition.localisations, locale, {
+      t: translate,
+    })
+    this._listService = new ListService(definition.lists, lists)
+    this._hideConditions = collectHideConditions(definition.components, repeatTypes)
+    this._lockConditions = collectLockConditions(definition.components, repeatTypes)
+    this._fieldsByPath = collectFields(definition.components, repeatTypes)
     this._locale.value = this._localisationService.locale
   }
 
@@ -132,7 +152,6 @@ export class FormEngine {
     // compare on another field can depend on this value. Errors still only
     // show for fields that were left, or after a submit.
     this.validateModel()
-    this._emitter.emit('modelChanged', { path })
   }
 
   removeValue(path: string): void {
@@ -142,7 +161,6 @@ export class FormEngine {
     if (defaultValue !== undefined) setProperty(this._model, path, defaultValue)
 
     this._dirtyPaths.add(path)
-    this._emitter.emit('modelChanged', { path })
   }
 
   // The user has left the field at `path`: validate it, and from now on
@@ -234,7 +252,7 @@ export class FormEngine {
   // field containing it; empty when no field does.
   getLabel(path: string): string {
     const { wildcardPath, repeatContext } = this.resolvePathContext(path)
-    const field = findClosest(this._fields, wildcardPath)
+    const field = findClosest(this._fieldsByPath, wildcardPath)
     return field?.label === undefined ? '' : this.localise(field.label, repeatContext)
   }
 
@@ -256,7 +274,6 @@ export class FormEngine {
     setProperty(this._model, path, [...items, item])
     this._dirtyPaths.add(path)
     this.validateModel()
-    this._emitter.emit('modelChanged', { path })
   }
 
   removeRepeatItem(path: string, index: number): void {
@@ -268,7 +285,6 @@ export class FormEngine {
     )
     this._dirtyPaths.add(path)
     this.validateModel()
-    this._emitter.emit('modelChanged', { path })
   }
 
   // For hide/disabled/readonly — defaults toward *not* hiding/disabling a
@@ -290,14 +306,6 @@ export class FormEngine {
       repeatContext,
       this.env,
     )
-  }
-
-  on<K extends keyof FormEngineEvents>(
-    type: K,
-    handler: (event: FormEngineEvents[K]) => void,
-  ): () => void {
-    this._emitter.on(type, handler)
-    return () => this._emitter.off(type, handler)
   }
 
   // Whether this one field is hidden by its own `hide`, in the row it is
@@ -399,6 +407,11 @@ export class FormEngine {
     }
     console.warn('[form-engine] No branch matched in a localisable object', branches)
     return undefined
+  }
+
+  // The field type that renders `type`, if the form has one.
+  getFieldType(type: string): FieldType | undefined {
+    return this._fieldTypes[type]
   }
 
   getList(name: string): Promise<unknown[]> {

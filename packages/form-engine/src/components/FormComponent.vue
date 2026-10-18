@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 
 import { warnOnce } from '@octarine/form-core'
 
 import { useFormEngine } from '../composables/useFormEngine'
 import { useRepeatContext } from '../composables/useRepeatContext'
 import { fieldWidth } from '../layout'
-import { getGlobalRegistry, REGISTRY_KEY } from '../registry'
 import type { FieldDefinition } from '../types'
 
 const props = defineProps<{
@@ -20,7 +19,6 @@ const props = defineProps<{
   inline?: boolean
 }>()
 
-const registry = inject(REGISTRY_KEY, getGlobalRegistry())
 const formEngine = useFormEngine()
 const repeatContext = useRepeatContext()
 
@@ -31,8 +29,9 @@ const visibleComponents = computed(() =>
 )
 
 function resolve(type: string) {
-  const component = registry[type]
-  if (!component) warnOnce(`[form-engine] No component registered for type "${type}"`)
+  const component = formEngine.getFieldType(type)?.component
+  if (!component)
+    warnOnce(`[form-engine] No field type "${type}": add it to createForms({ fields })`)
   return component
 }
 
