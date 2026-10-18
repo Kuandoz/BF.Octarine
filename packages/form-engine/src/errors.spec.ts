@@ -174,7 +174,7 @@ describe('what an error says about its field', () => {
     ],
     validations: {
       name: [{ type: 'required' }],
-      phone: [{ type: 'pattern', pattern: '^\d+$' }],
+      phone: [{ type: 'pattern', value: '^\d+$' }],
       address: [
         {
           type: 'street-or-city',
@@ -251,5 +251,36 @@ describe('what an error says about its field', () => {
     expect(engine.getError('address')).toBe('Fill in a street or a city.')
     engine.setValue('address.city', 'Gent')
     expect(engine.getError('address')).toBeUndefined()
+  })
+})
+
+describe('rules that depend on other fields', () => {
+  const definition: FormDefinition = {
+    components: [
+      { type: 'checkbox', path: 'wantsCall' },
+      { type: 'text', path: 'phone', hide: 'wantsCall !== true' },
+      { type: 'text', path: 'start' },
+      { type: 'text', path: 'end' },
+    ],
+    validations: {
+      phone: [{ type: 'required', condition: 'wantsCall === true' }],
+      end: [{ type: 'required', condition: 'start !== undefined && start !== ""' }],
+    },
+  }
+
+  it('update when the value they depend on changes, after a submit', () => {
+    const engine = new FormEngine(definition)
+    expect(engine.submit()).toBe(true)
+    engine.setValue('wantsCall', true)
+    expect(engine.getErrors().map((error) => error.path)).toEqual(['phone'])
+    engine.setValue('wantsCall', false)
+    expect(engine.getErrors()).toEqual([])
+  })
+
+  it("stay quiet for a field that wasn't left yet, before a submit", () => {
+    const engine = new FormEngine(definition)
+    engine.setValue('start', '2026-01-01')
+    expect(engine.getValidationResult('end')?.valid).toBe(false)
+    expect(engine.getError('end')).toBeUndefined()
   })
 })

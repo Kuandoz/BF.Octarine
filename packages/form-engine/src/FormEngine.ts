@@ -130,7 +130,10 @@ export class FormEngine {
   setValue(path: string, value: unknown): void {
     setProperty(this._model, path, value)
     this._dirtyPaths.add(path)
-    this.revalidate(path)
+    // Every rule runs again, not just those on `path`: a required-if or a
+    // compare on another field can depend on this value. Errors still only
+    // show for fields that were left, or after a submit.
+    this.validateModel()
     this._emitter.emit('modelChanged', { path })
   }
 
