@@ -1,6 +1,6 @@
 import { setup, type Decorator, type Preview } from '@storybook/vue3-vite'
 import { defaultTheme, themes } from '@octarine/tokens'
-import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events'
+import { GLOBALS_UPDATED, SET_GLOBALS, UPDATE_GLOBALS } from 'storybook/internal/core-events'
 import { addons } from 'storybook/preview-api'
 import { createIcons } from '../../../packages/vue/src'
 import icons from 'virtual:octarine-icons'
@@ -30,21 +30,29 @@ function apply(theme: string, mode: string, language = 'en') {
 const withTheme: Decorator = (story, context) => {
   apply(
     context.globals.theme ?? defaultTheme.name,
-    context.globals.mode ?? 'light',
+    context.globals.mode ?? systemMode(),
     context.globals.language,
   )
   return story()
 }
 
-apply(defaultTheme.name, 'light')
+// Light or dark follows the system until a mode is picked in the toolbar.
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
+const systemMode = () => (systemDark.matches ? 'dark' : 'light')
+
+apply(defaultTheme.name, systemMode())
 
 // Docs-only pages (MDX without stories) never run decorators, so follow the
 // toolbar directly as well.
 const followGlobals = ({ globals }: { globals: Record<string, string | undefined> }) =>
-  apply(globals.theme ?? defaultTheme.name, globals.mode ?? 'light', globals.language)
+  apply(globals.theme ?? defaultTheme.name, globals.mode ?? systemMode(), globals.language)
 const channel = addons.getChannel()
 channel.on(SET_GLOBALS, followGlobals)
 channel.on(GLOBALS_UPDATED, followGlobals)
+// A change of the system setting while Storybook is open switches too.
+systemDark.addEventListener('change', () =>
+  channel.emit(UPDATE_GLOBALS, { globals: { mode: systemMode() } }),
+)
 
 // Icons the stories use, found by the octarine-icons Vite plugin.
 setup((app) => {
@@ -92,7 +100,7 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: { theme: defaultTheme.name, mode: 'light', language: 'en' },
+  initialGlobals: { theme: defaultTheme.name, mode: systemMode(), language: 'en' },
   parameters: {
     layout: 'padded',
     backgrounds: { disable: true },
