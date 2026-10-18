@@ -18,7 +18,43 @@ export function collectHideConditions(
   components: FieldDefinition[],
 ): Map<string, HideCondition[][]> {
   const conditions = new Map<string, HideCondition[][]>()
+  walkFields(components, (key, field, depth, chain) => {
+    conditions.set(key, [...(conditions.get(key) ?? []), chain])
+  })
+  return conditions
+}
 
+/**
+ * The first field that renders each path, in screen order, keyed like
+ * collectHideConditions. For what is said about a path, like its label.
+ */
+export function collectFields(components: FieldDefinition[]): Map<string, FieldDefinition> {
+  const fields = new Map<string, FieldDefinition>()
+  walkFields(components, (key, field) => {
+    if (!fields.has(key)) fields.set(key, field)
+  })
+  return fields
+}
+
+/**
+ * The entry for a path, or that of the closest field that contains it:
+ * `address.street` belongs to an `address` field.
+ */
+export function findClosest<T>(entries: Map<string, T>, wildcardPath: string): T | undefined {
+  const segments = wildcardPath.split('.')
+  for (let length = segments.length; length > 0; length--) {
+    const found = entries.get(segments.slice(0, length).join('.'))
+    if (found !== undefined) return found
+  }
+  return undefined
+}
+
+// Visits every field that has a path, in screen order, with its full
+// wildcard path, its repeat depth and the hide conditions on the way to it.
+function walkFields(
+  components: FieldDefinition[],
+  visit: (key: string, field: FieldDefinition, depth: number, chain: HideCondition[]) => void,
+): void {
   const walk = (
     fields: FieldDefinition[],
     prefix: string,
@@ -36,7 +72,7 @@ export function collectHideConditions(
       }
 
       const key = prefix ? `${prefix}.${field.path}` : field.path
-      conditions.set(key, [...(conditions.get(key) ?? []), chain])
+      visit(key, field, depth, chain)
 
       // A repeat's children are relative to its rows; other containers'
       // children have their own full paths.
@@ -44,23 +80,5 @@ export function collectHideConditions(
       else walk(children, prefix, depth, chain)
     }
   }
-
   walk(components, '', 0, [])
-  return conditions
-}
-
-/**
- * The hide conditions for a path, or those of the closest field that contains
- * it: `address.street` belongs to an `address` field.
- */
-export function findHideConditions(
-  conditions: Map<string, HideCondition[][]>,
-  wildcardPath: string,
-): HideCondition[][] | undefined {
-  const segments = wildcardPath.split('.')
-  for (let length = segments.length; length > 0; length--) {
-    const found = conditions.get(segments.slice(0, length).join('.'))
-    if (found) return found
-  }
-  return undefined
 }

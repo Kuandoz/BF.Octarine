@@ -1,8 +1,8 @@
-import { reactive } from 'vue'
+import { isProxy, reactive } from 'vue'
 
 import { describe, expect, it } from 'vitest'
 
-import { mergeDeep } from './mergeDeep'
+import { clonePlain, mergeDeep } from './mergeDeep'
 
 describe('mergeDeep', () => {
   it('merges nested plain objects key by key', () => {
@@ -53,5 +53,19 @@ describe('mergeDeep', () => {
     expect(target).toEqual({ items: [{ name: 'Ada' }] })
     ;(target.items as unknown[]).push({ name: 'Grace' })
     expect(rawItems).toHaveLength(1)
+  })
+})
+
+describe('clonePlain', () => {
+  it('copies deeply and leaves no reactive proxies behind', () => {
+    const model = reactive({ items: [{ name: 'a' }] as Array<{ name: string }>, when: new Date(0) })
+    model.items = [...model.items, { name: 'b' }]
+    const copy = clonePlain(model)
+
+    expect(copy).toEqual({ items: [{ name: 'a' }, { name: 'b' }], when: new Date(0) })
+    expect(isProxy(copy)).toBe(false)
+    expect(isProxy(copy.items[0])).toBe(false)
+    copy.items[0]!.name = 'changed'
+    expect(model.items[0]!.name).toBe('a')
   })
 })

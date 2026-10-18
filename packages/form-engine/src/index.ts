@@ -1,6 +1,7 @@
 export { default as FormComponent } from './components/FormComponent.vue'
 export { default as FormRenderer } from './components/FormRenderer.vue'
-export * from './composables/useFieldModel'
+export { default as FormRows } from './components/FormRows.vue'
+export * from './composables/useField'
 export { FORM_ENGINE_KEY, useFormEngine } from './composables/useFormEngine'
 export * from './composables/useLocalizedString'
 export { REPEAT_CONTEXT_KEY, useRepeatContext } from './composables/useRepeatContext'

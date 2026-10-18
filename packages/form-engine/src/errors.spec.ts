@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { FormEngine } from './FormEngine'
 import type { FormDefinition } from './types'
+import type { ValidatorContext } from './validators'
 
 // Errors appear once the user has left a field or tried to submit, not while
 // they are still typing the first characters.
@@ -125,13 +126,19 @@ describe('getErrors', () => {
       'email',
       'terms',
     ])
-    expect(engine.getErrors()[0]).toEqual({ path: 'name', message: 'This field is required.' })
+    expect(engine.getErrors()[0]).toEqual({
+      path: 'name',
+      message: 'This field is required.',
+      label: '',
+    })
   })
 
   it('lists only touched fields before a submit', () => {
     const engine = new FormEngine(definition, model())
     engine.touch('email')
-    expect(engine.getErrors()).toEqual([{ path: 'email', message: 'This field is required.' }])
+    expect(engine.getErrors()).toEqual([
+      { path: 'email', message: 'This field is required.', label: '' },
+    ])
   })
 
   it('forgets the errors of a removed row', () => {
@@ -140,5 +147,109 @@ describe('getErrors', () => {
     engine.removeRepeatItem('items', 1)
     expect(engine.getErrors().map((error) => error.path)).not.toContain('items.1.title')
     expect(engine.getErrors().map((error) => error.path)).toContain('items.0.title')
+  })
+})
+
+describe('what an error says about its field', () => {
+  const definition: FormDefinition = {
+    components: [
+      { type: 'text', path: 'name', label: 'name' },
+      { type: 'checkbox', path: 'wantsCall', label: 'Call me' },
+      { type: 'text', path: 'phone', label: 'phone', hide: '!wantsCall' },
+      {
+        type: 'fieldset',
+        path: 'address',
+        label: 'Address',
+        components: [
+          { type: 'text', path: 'address.street', label: 'Street' },
+          { type: 'text', path: 'address.city', label: 'City' },
+        ],
+      },
+      {
+        type: 'repeat',
+        path: 'items',
+        label: 'Items',
+        components: [{ type: 'text', path: 'title', label: 'Title' }],
+      },
+    ],
+    validations: {
+      name: [{ type: 'required' }],
+      phone: [{ type: 'pattern', pattern: '^\d+$' }],
+      address: [
+        {
+          type: 'street-or-city',
+          message: 'Fill in a street or a city.',
+        },
+      ],
+      'items.*.title': [{ type: 'required' }],
+    },
+    localisations: { default: 'en', en: { name: 'Name', phone: 'Phone' }, nl: { name: 'Naam' } },
+  }
+  const validators = {
+    'street-or-city': ({ value }: ValidatorContext) => {
+      const address = (value ?? {}) as { street?: string; city?: string }
+      return { valid: Boolean(address.street || address.city) }
+    },
+  }
+
+  it('gives the localised label of the field, and of the group for a nested path', () => {
+    const engine = new FormEngine(definition, { items: [{}] }, validators)
+    expect(engine.getLabel('name')).toBe('Name')
+    expect(engine.getLabel('address')).toBe('Address')
+    expect(engine.getLabel('address.zip')).toBe('Address')
+    expect(engine.getLabel('items.0.title')).toBe('Title')
+    expect(engine.getLabel('somewhere')).toBe('')
+
+    engine.setLocale('nl')
+    expect(engine.getLabel('name')).toBe('Naam')
+  })
+
+  it('says what a hidden field is about, without a target to jump to', () => {
+    const engine = new FormEngine(definition, { phone: 'abc' }, validators)
+    engine.submit()
+    expect(engine.isHidden('phone')).toBe(true)
+    expect(engine.getErrors().find((error) => error.path === 'phone')).toEqual({
+      path: 'phone',
+      message: "This value doesn't match the expected format.",
+      label: 'Phone',
+    })
+  })
+
+  it('targets the mounted control of a path, the first one when there are more', () => {
+    const engine = new FormEngine(definition)
+    const unregisterFirst = engine.registerField('name', 'first')
+    engine.registerField('name', 'second')
+    expect(engine.getFieldId('name')).toBe('first')
+    unregisterFirst()
+    expect(engine.getFieldId('name')).toBe('second')
+  })
+
+  it('targets the first control on screen inside a group without its own', () => {
+    const engine = new FormEngine(definition, {}, validators)
+    engine.registerField('address.city', 'city')
+    engine.registerField('address.street', 'street')
+    engine.submit()
+    expect(engine.getErrors().find((error) => error.path === 'address')).toEqual({
+      path: 'address',
+      message: 'Fill in a street or a city.',
+      label: 'Address',
+      target: 'street',
+    })
+  })
+
+  it("targets a group's own control when it registered one, like a repeat's Add button", () => {
+    const engine = new FormEngine(definition, { items: [{}] })
+    engine.registerField('items.0.title', 'title')
+    engine.registerField('items', 'add')
+    expect(engine.getFieldId('items')).toBe('add')
+    expect(engine.getFieldId('items.0')).toBe('title')
+  })
+
+  it('updates the error of a group when a value inside it changes', () => {
+    const engine = new FormEngine(definition, {}, validators)
+    engine.submit()
+    expect(engine.getError('address')).toBe('Fill in a street or a city.')
+    engine.setValue('address.city', 'Gent')
+    expect(engine.getError('address')).toBeUndefined()
   })
 })

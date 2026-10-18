@@ -39,8 +39,14 @@ Done so far:
   attempt (`touch`, `submit`, `getError`); `getErrors()` lists them in screen order; `OErrorSummary`
   in `@octarine/vue`; half/third widths in a container-query grid
   (`@octarine/form-engine/layout.css`).
-- Tests for two forms on one page with the same paths (`src/components/twoForms.spec.ts`), with two
-  `it.todo`s for field ids, to fill in with `useField`.
+- Tests for two forms on one page with the same paths (`src/components/twoForms.spec.ts`),
+  including their field ids and error-summary targets.
+- The field contract (step 1): `useField` with ids from `useId()` and a path → id map per engine;
+  `getErrors()` gives `{ path, message, label, target? }`; group errors target the group's first
+  control (or a control the group registers, like a repeat's Add button) and follow changes inside
+  the group; `FormRows`; `FormRenderer` renders `<form novalidate>`, emits `submit`/`invalid`
+  and follows `definition`, `model` and `locale`; `FormComponent` and `isHidden` share one hide
+  check.
 - Expressions go through a swappable `ExpressionLanguage` (`src/expressions.ts`). The built-in `js`
   language (`src/jsLanguage.ts`) uses subscript's parser with the engine's own evaluator;
   sandboxjs is gone. A form names its language in `definition.expressions`.
@@ -92,7 +98,11 @@ Abstractions that keep the "where does it run" choice open:
 - Server-side validation is assumed to run in Node first, behind interfaces that allow moving it.
 - Field ids are **not** derived from paths: two forms on a page can capture the same path. Each
   mounted field gets an id from `useId()`, and each engine keeps a path → id map for error-summary
-  links (first field in screen order wins; no mounted field means no link).
+  links (the first field mounted for a path wins; no mounted field means no link). A page with
+  several Vue apps gives each its own `app.config.idPrefix`.
+- `FormRenderer` compares `definition` and `model` by content, so an inline `:model="{}"` doesn't
+  reset the form on every render. A changed definition keeps the values filled in; a changed model
+  starts over; a changed locale switches in place.
 - An expression language only parses and evaluates. Scope, functions, `env`, fallbacks (broken
   `hide` → visible, broken rule condition → rule stays active) and caching stay in the engine.
 - `js` is the default language. FEEL (feelin, ~59 KB gzipped) may come later as a separate
@@ -115,28 +125,16 @@ Abstractions that keep the "where does it run" choice open:
 
 ## Next steps, in order
 
-### 1. Contract fixes
+### 1. Contract fixes (done)
 
-- [ ] **`attrs` bug.** `useFieldModel().attrs` passes every field property through, so
-      `disabled: "locked === true"` renders a permanently disabled input, and `label`, `layout`,
-      `hint`, `options` end up as junk HTML attributes. Fixed together with `useField`.
-- [ ] **`useField(field)`**: the one composable a field uses. Returns `id`, `path`, `value`,
-      `label`, `hint`, `required`, `disabled` (includes constants), `readonly`, `error`, `onBlur`
-      (calls `touch`) and `attrs` (only the field's own extra settings). Reads the `field` prop
-      reactively.
-- [ ] **Path → id map** in the engine, filled by `useField` on mount and emptied on unmount;
-      `getErrors()` returns `{ path, message, target }`. Fill in the two `it.todo`s in
-      `twoForms.spec.ts`.
-- [ ] **Errors on groups**: a rule on a container or repeat path (`address`, `items`) gets a place
-      to show and a summary target (the group's first control, or the repeat's Add button).
-- [ ] **`FormRows`** in the engine: renders each row of a repeat and provides its scope, so a repeat
-      component only adds Add/Remove.
-- [ ] **`FormRenderer`**: renders a real `<form novalidate>`, calls `submit()`, emits `submit`
-      (model) or `invalid` (errors); reacts to changes in `definition`, `model` and `locale`.
-- [ ] **One hide rule**: `FormComponent` uses the same visibility logic as validation
-      (`isHidden`) instead of its own `resolveCondition(field.hide)`.
-- [ ] **Errors of hidden fields** in the error summary: no link (the field isn't mounted), so the
-      entry needs the field's label to say what it's about.
+All items done. Left over, for later steps:
+
+- [ ] The engine recognises a repeat by `type: 'repeat'` (for `isHidden`, labels and screen order).
+      A custom repeat type needs to say it has rows; part of `defineField` (step 3).
+- [ ] Rows are keyed by index, and touched state by path: after removing row 1, row 2 (now row 1)
+      takes over row 1's touched state. Stable row ids would fix it.
+- [ ] After Remove, focus has to go somewhere sensible (the next row, or the Add button); that's
+      the repeat component's job in step 6.
 
 ### 2. Split `form-abstractions` and `form-core` out of `form-engine`
 
@@ -208,8 +206,8 @@ every theme), then add its `defineField` in `@octarine/forms`.
 ### 8. Form builder (WYSIWYG)
 
 - [ ] `apps/form-builder`. Property panels generated from field schemas.
-- [ ] Needs: the schema (step 5), a `FormRenderer` that updates live (step 1), and a stable id per
-      field in the definition for selecting and moving fields.
+- [ ] Needs: the schema (step 5) and a stable id per field in the definition for selecting and
+      moving fields. `FormRenderer` already follows a changed definition (step 1).
 - [ ] Every drag-and-drop action also works without dragging, e.g. move up/down buttons
       (WCAG 2.5.7).
 

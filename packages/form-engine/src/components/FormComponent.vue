@@ -2,6 +2,7 @@
 import { computed, inject } from 'vue'
 
 import { useFormEngine } from '../composables/useFormEngine'
+import { useRepeatContext } from '../composables/useRepeatContext'
 import { fieldWidth } from '../layout'
 import { getGlobalRegistry, REGISTRY_KEY } from '../registry'
 import type { FieldDefinition } from '../types'
@@ -20,9 +21,12 @@ const props = defineProps<{
 
 const registry = inject(REGISTRY_KEY, getGlobalRegistry())
 const formEngine = useFormEngine()
+const repeatContext = useRepeatContext()
 
+// The same check isHidden makes, so what is on screen and what the engine
+// reports as hidden can't disagree.
 const visibleComponents = computed(() =>
-  props.components.filter((field) => !formEngine.resolveCondition(field.hide, false)),
+  props.components.filter((field) => !formEngine.isFieldHidden(field, repeatContext)),
 )
 
 function resolve(type: string) {

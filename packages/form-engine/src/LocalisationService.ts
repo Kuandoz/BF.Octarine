@@ -19,14 +19,23 @@ export class LocalisationService {
     translationProvider: TranslationProvider = defaultTranslationProvider,
   ) {
     this.localisations = localisations
-    const defaultLocale =
-      typeof localisations.default === 'string' ? localisations.default : undefined
-    this._locale = locale ?? defaultLocale ?? ''
+    this._locale = this.pickLocale(locale)
     this.translationProvider = translationProvider
   }
 
   get locale(): string {
     return this._locale
+  }
+
+  // `undefined` goes back to the form's default locale.
+  setLocale(locale: string | undefined): void {
+    this._locale = this.pickLocale(locale)
+  }
+
+  private pickLocale(locale: string | undefined): string {
+    const defaultLocale =
+      typeof this.localisations.default === 'string' ? this.localisations.default : undefined
+    return locale ?? defaultLocale ?? ''
   }
 
   // Resolves `key` against the current locale's table (a dotted path, e.g.

@@ -1,18 +1,14 @@
 // @vitest-environment jsdom
-import { computed, defineComponent, h, provide } from 'vue'
+import { defineComponent, h } from 'vue'
 
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
-import FormComponent from './FormComponent.vue'
 import FormRenderer from './FormRenderer.vue'
+import FormRows from './FormRows.vue'
 
-import { useFieldModel } from '../composables/useFieldModel'
-import { useFormEngine } from '../composables/useFormEngine'
-import { useLocalizedString } from '../composables/useLocalizedString'
-import { REPEAT_CONTEXT_KEY, useRepeatContext } from '../composables/useRepeatContext'
+import { useField } from '../composables/useField'
 import type { FormEngine } from '../FormEngine'
-import { resolveFieldPath } from '../pathAccessors'
 import type { ComponentRegistry } from '../registry'
 import type { FieldDefinition, FormDefinition } from '../types'
 import type { ValidatorRegistry } from '../validators'
@@ -26,48 +22,28 @@ import type { ValidatorRegistry } from '../validators'
 const TextField = defineComponent({
   props: { field: { type: Object, required: true } },
   setup(props) {
-    const field = props.field as FieldDefinition
-    const engine = useFormEngine()
-    const { path, value } = useFieldModel<string>(field)
-    const label = useLocalizedString(() => field.label)
-    const error = computed(() => engine.getError(path.value))
+    const { id, path, value, label, required, error, onBlur } = useField<string>(
+      () => props.field as FieldDefinition,
+    )
     return () =>
       h('div', { class: 'text-field', 'data-path': path.value }, [
-        h('span', { class: 'label' }, label.value),
-        engine.isRequired(path.value) ? h('span', { class: 'required' }, '*') : null,
+        h('label', { class: 'label', for: id }, label.value),
+        required.value ? h('span', { class: 'required' }, '*') : null,
         h('input', {
+          id,
           value: value.value ?? '',
           onInput: (event: Event) => (value.value = (event.target as HTMLInputElement).value),
-          onBlur: () => engine.touch(path.value),
+          onBlur,
         }),
         error.value ? h('p', { class: 'error' }, error.value) : null,
       ])
   },
 })
 
-// A minimal repeat: one FormComponent per row, each with its own row scope.
 const RepeatField = defineComponent({
   props: { field: { type: Object, required: true } },
-  setup(props) {
-    const field = props.field as FieldDefinition
-    const engine = useFormEngine()
-    const arrayPath = computed(() => resolveFieldPath(field.path, useRepeatContext()))
-    const Row = defineComponent({
-      props: { index: { type: Number, required: true } },
-      setup(rowProps) {
-        provide(REPEAT_CONTEXT_KEY, { arrayPath: arrayPath.value, arrayIndex: rowProps.index })
-        return () => h(FormComponent, { components: field.components ?? [] })
-      },
-    })
-    return () =>
-      h(
-        'div',
-        { class: 'repeat' },
-        ((engine.getValue(arrayPath.value) as unknown[] | undefined) ?? []).map((_, index) =>
-          h(Row, { key: index, index }),
-        ),
-      )
-  },
+  setup: (props) => () =>
+    h('div', { class: 'repeat' }, [h(FormRows, { field: props.field as FieldDefinition })]),
 })
 
 const components = { text: TextField, repeat: RepeatField }
@@ -287,14 +263,35 @@ describe('two forms on one page', () => {
     )
 
     expect(a.engine.submit()).toBe(false)
-    expect(a.engine.getErrors()).toEqual([{ path: 'person.name', message: 'Never valid' }])
+    expect(a.engine.getErrors()).toMatchObject([{ path: 'person.name', message: 'Never valid' }])
     // An unknown rule type is skipped, so the other form stays valid.
     expect(b.engine.submit()).toBe(true)
     wrapper.unmount()
   })
 
-  // Field ids come with useField: each mounted field gets its own id from
-  // useId(), and every engine maps its paths to its own fields' ids.
-  it.todo('give fields with the same path different ids')
-  it.todo("link each form's error summary to that form's own field")
+  it('give fields with the same path different ids', () => {
+    const { wrapper, a, b } = mountTwo({ definition: personForm() })
+
+    const idA = a.el.get('[data-path="person.name"] input').attributes('id')
+    const idB = b.el.get('[data-path="person.name"] input').attributes('id')
+    expect(idA).toBeTruthy()
+    expect(idA).not.toBe(idB)
+    expect(a.el.get('[data-path="person.name"] label').attributes('for')).toBe(idA)
+    expect(document.querySelectorAll(`[id="${idA}"]`)).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it("link each form's error summary to that form's own field", () => {
+    const { wrapper, a, b } = mountTwo({ definition: personForm() })
+
+    a.engine.submit()
+    b.engine.submit()
+
+    const targetA = a.engine.getErrors()[0]!.target
+    const targetB = b.engine.getErrors()[0]!.target
+    expect(targetA).toBe(a.el.get('[data-path="person.name"] input').attributes('id'))
+    expect(targetB).toBe(b.el.get('[data-path="person.name"] input').attributes('id'))
+    expect(targetA).not.toBe(targetB)
+    wrapper.unmount()
+  })
 })

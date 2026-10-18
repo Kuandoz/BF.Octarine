@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import FormComponent from './FormComponent.vue'
+import FormRows from './FormRows.vue'
 
 import { FORM_ENGINE_KEY } from '../composables/useFormEngine'
 import { FormEngine } from '../FormEngine'
 import { registerComponent } from '../registry'
-import type { FieldDefinition } from '../types'
+import type { FieldDefinition, FormDefinition } from '../types'
 
 const StubField = defineComponent({
   props: ['field'],
@@ -98,5 +99,84 @@ describe('FormComponent grid', () => {
     const wrapper = mountWithEngine(engine, [{ type: 'stub', path: 'a' }])
     expect(wrapper.attributes('class')).toBeUndefined()
     expect(wrapper.get('[data-form-item]').attributes('class')).toBeUndefined()
+  })
+})
+
+describe('FormComponent and isHidden', () => {
+  // A container renders its children through FormComponent; a repeat its rows.
+  const Group = defineComponent({
+    props: ['field'],
+    setup: (props: { field: FieldDefinition }) => () =>
+      h('div', { class: 'group' }, [
+        h(FormComponent, { components: props.field.components ?? [] }),
+      ]),
+  })
+  const Rows = defineComponent({
+    props: ['field'],
+    setup: (props: { field: FieldDefinition }) => () => h(FormRows, { field: props.field }),
+  })
+  registerComponent('agree-group', Group)
+  registerComponent('repeat', Rows)
+
+  it('agree on every path, through containers, rows and both scopes', async () => {
+    const definition: FormDefinition = {
+      components: [
+        { type: 'stub', path: 'mode' },
+        {
+          type: 'agree-group',
+          hide: "mode === 'none'",
+          components: [
+            { type: 'stub', path: 'contact.phone', hide: "mode !== 'phone'" },
+            { type: 'stub', path: 'contact.email', hide: "mode !== 'email'" },
+          ],
+        },
+        {
+          type: 'repeat',
+          path: 'items',
+          components: [
+            { type: 'stub', path: 'kind' },
+            { type: 'stub', path: 'reason', hide: "kind !== 'other'" },
+            { type: 'stub', path: 'note', hide: { expression: "mode === 'phone'", root: true } },
+          ],
+        },
+      ],
+    }
+    const engine = new FormEngine(definition, {
+      mode: 'phone',
+      items: [{ kind: 'other' }, { kind: 'x' }],
+    })
+    const wrapper = mountWithEngine(engine, definition.components)
+    const paths = [
+      'mode',
+      'contact.phone',
+      'contact.email',
+      ...[0, 1].flatMap((row) => ['kind', 'reason', 'note'].map((key) => `items.${row}.${key}`)),
+    ]
+    const check = () => {
+      const rendered = new Set(wrapper.findAll('.stub-field').map((field) => field.text()))
+      const resolved = (path: string) =>
+        path.startsWith('items.') ? path.split('.').slice(2).join('.') : path
+      for (const path of paths) {
+        const shown = [...rendered].includes(resolved(path))
+        // Rows render the row-relative path; tell rows apart by count instead.
+        if (!path.startsWith('items.')) expect(shown, path).toBe(!engine.isHidden(path))
+      }
+      const rowFields = wrapper.findAll('.stub-field').map((field) => field.text())
+      const expectedRowFields = paths
+        .filter((path) => path.startsWith('items.') && !engine.isHidden(path))
+        .map(resolved)
+      expect(rowFields.filter((text) => ['kind', 'reason', 'note'].includes(text))).toEqual(
+        expectedRowFields,
+      )
+    }
+
+    check()
+    engine.setValue('mode', 'email')
+    await nextTick()
+    check()
+    engine.setValue('mode', 'none')
+    engine.setValue('items.1.kind', 'other')
+    await nextTick()
+    check()
   })
 })

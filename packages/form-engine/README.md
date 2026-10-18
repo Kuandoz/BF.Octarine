@@ -30,35 +30,63 @@ import { useFormEngine } from '@octarine/form-engine'
 const formEngine = useFormEngine()
 ```
 
-It's responsible for its own read/write wiring — read the current value with
-`formEngine.getValue(field.path)`, write changes with
-`formEngine.setValue(field.path, value)`. Nothing else is assumed about how the
-component looks or what UI library backs it.
+Nothing is assumed about how the component looks or what UI library backs it.
 
-The `useFieldModel` composable does that read/write wiring for you — pass it
-`field` (it resolves the `FormEngine` itself via `useFormEngine()`), get back a
-`path` ref, a writable `value` ref, and `attrs`: every other property on
-`field` (anything beyond our own
-`type`/`path`/`components`/`hide`), meant for `v-bind` so an
-extra JSON property your wrapper never explicitly wires up (`maxLength`,
-`pattern`, `icon`, ...) still reaches the underlying control automatically —
-the same "spread the field config, then override what you've actually
-processed" pattern the legacy `_forms` system used. Vue merges `v-bind`
-objects with individual bindings in template order, so put `attrs` first:
+### `useField`
+
+`useField` is the one composable a field component needs. Pass it the `field`
+prop as a getter, so an edited definition (in a builder) shows up right away:
 
 ```vue
 <script setup lang="ts">
-import { useFieldModel } from '@octarine/form-engine'
+import { useField } from '@octarine/form-engine'
 import type { FieldDefinition } from '@octarine/form-engine'
 
 const props = defineProps<{ field: FieldDefinition }>()
-const { value, attrs } = useFieldModel<string>(props.field)
+const { id, value, label, hint, required, disabled, readonly, error, onBlur, attrs } =
+  useField<string>(() => props.field)
 </script>
 
 <template>
-  <input v-bind="attrs" v-model="value" />
+  <label :for="id">{{ label }}<span v-if="required"> (required)</span></label>
+  <input
+    :id="id"
+    v-model="value"
+    v-bind="attrs"
+    :required="required"
+    :disabled="disabled"
+    :readonly="readonly"
+    :aria-invalid="error ? true : undefined"
+    @blur="onBlur"
+  />
+  <p v-if="error">{{ error }}</p>
 </template>
 ```
+
+| Returns    | What it is                                                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`       | An id for the control, from Vue's `useId()`. Unique per mounted field, so two forms that capture the same path don't clash.     |
+| `path`     | The path resolved against the row the field is in (`items.2.quantity`).                                                         |
+| `value`    | Reads and writes the value at `path`.                                                                                           |
+| `label`    | `field.label`, localised. `hint` likewise, or `undefined`.                                                                      |
+| `required` | Whether validation demands a value right now, following required-if conditions.                                                 |
+| `disabled` | The `disabled` condition, evaluated; also true for a constant. `readonly` likewise.                                             |
+| `error`    | The error to show now: after the field was left, or after a submit.                                                             |
+| `onBlur`   | Call it when the user leaves the field; from then on its error shows.                                                           |
+| `attrs`    | The field's own settings (`maxLength`, `options`, ...): every property the engine doesn't read itself. For the control's props. |
+
+`attrs` leaves out what the engine reads (`type`, `path`, `components`, `label`,
+`hint`, `layout`, `labelBadge`, `hide`, `disabled`, `readonly`): a `disabled`
+condition like `"locked === true"` isn't an HTML attribute.
+
+`useField` registers `id` with the engine for its path, so an error summary can
+link to the control (see [Showing errors](#showing-errors)). A group that only
+frames its children, like a fieldset, has no control for that id: it calls
+`useField(() => props.field, { target: false })`, and errors on its path link to
+its first control instead.
+
+Ids come from `useId()`, so they are unique within one Vue app. A page that
+mounts **several Vue apps** gives each its own `app.config.idPrefix`.
 
 `useFormEngine()` throws if called outside a `FormRenderer`'s subtree — a
 clear failure the first time a component is mounted standalone (Storybook, an
@@ -74,6 +102,46 @@ mount(MyField, {
   global: { provide: { [FORM_ENGINE_KEY]: engine } },
 })
 ```
+
+## The form
+
+`FormRenderer` renders a `<form novalidate>`: the engine validates, not the
+browser. Sending it (a submit button, Enter in a field) calls `engine.submit()`
+and emits either `submit`, with a plain copy of the values, or `invalid`, with
+the errors in screen order. Attributes like `aria-label` or `class` go to the
+`<form>`.
+
+```vue
+<FormRenderer
+  :definition="definition"
+  :model="model"
+  :locale="locale"
+  aria-label="Contact details"
+  @submit="send"
+  @invalid="(errors) => (summary = errors)"
+>
+  <template #before="{ engine }">
+    <!-- e.g. an error summary -->
+  </template>
+  <OButton type="submit">Send</OButton>
+</FormRenderer>
+```
+
+The `before` slot sits above the fields and the default slot below them; both
+get the `engine`. The component also exposes `engine` and `submit()`, for a
+button outside the form.
+
+It follows its props:
+
+- **`locale`** switches the language in place; what was filled in stays.
+- **`definition`** changes (a new object, or edits inside it, as in a builder's
+  preview) make a new engine that keeps the values filled in so far.
+- **`model`** changes start over with those values.
+
+Both are compared by content, so a template that builds them inline
+(`:model="{}"`) doesn't reset the form on every render. The engine copies the
+model it is given and never writes into it; read the values from the `submit`
+event or `engine.model`.
 
 ## How resolution works
 
@@ -202,9 +270,34 @@ validations: {
 ```
 
 `engine.isHidden(path)` tells whether every field that shows a path is hidden,
-by its own `hide`, a container's, or (in a repeat) its row's, for an error
-summary that can't link to a hidden field. Paths no field renders are never
-hidden, and `address.street` follows the `address` field it belongs to.
+by its own `hide`, a container's, or (in a repeat) its row's. `FormComponent`
+leaves a field out with the same check, so what is on screen and what the engine
+reports can't disagree. Paths no field renders are never hidden, and
+`address.street` follows the `address` field it belongs to.
+
+### Showing errors
+
+`engine.getErrors()` lists every error that shows right now, in the order the
+fields appear on screen, for an error summary such as `OErrorSummary`:
+
+```ts
+interface FormError {
+  path: string
+  message: string
+  label: string // the field's label, localised; '' when no field renders the path
+  target?: string // id of the control to jump to
+}
+```
+
+`target` is the id of the control `useField` mounted for the path (the first one,
+if several fields show it). An error on a group (`address`, `items`) without a
+control of its own targets the group's first control; a repeat can register its
+Add button for its own path instead. A hidden field has no target: there is
+nothing on screen to jump to, so the summary entry needs the `label` to say what
+it is about.
+
+An error on a group follows the values inside it: changing `address.city`
+re-runs the rules on `address`.
 
 A path needs no corresponding rendered field at all — a cross-field rule like
 `endDate` works fine with no UI field behind it. Inside a `repeat`, a
@@ -478,7 +571,8 @@ dotted-path nesting the same way form-model paths use:
 
 `FormEngine.localise("Button.Label")` (and the `useLocalizedString` composable,
 which wraps it in a `computed`) resolves against the active locale — an
-explicit `locale` constructor/`FormRenderer` prop, else `localisations.default`,
+explicit `locale` constructor/`FormRenderer` prop (or `engine.setLocale()`
+later), else `localisations.default`,
 else `""`. `useLocalizedString` takes a **getter**, not a plain value —
 `useLocalizedString(() => props.field.label)`, not
 `useLocalizedString(props.field.label)` — so it re-reads the current value on
@@ -548,12 +642,41 @@ each scoped to its own row:
 
 A field inside `components` addresses **its own row** — `path: "quantity"`
 resolves to `items.0.quantity`, `items.1.quantity`, and so on, computed
-automatically by every composable (`useFieldModel`, `useLocalizedString`) and
+automatically by every composable (`useField`, `useLocalizedString`) and
 by `FormComponent`'s own `hide` check. Nothing about the field wrapper itself
 changes — it's still just `{ field }`, exactly like a non-repeated field.
 
-**How the row is threaded through**: `FormRepeat` (registered under `"repeat"`
-in `@octarine/forms`) renders one `FormRepeatItem` per array
+**`FormRows`** renders the rows. A repeat component (registered under
+`"repeat"`; the engine recognises repeats by that type) only adds how it looks
+and the Add/Remove buttons:
+
+```vue
+<script setup lang="ts">
+import { FormComponent, FormRows, useField, useFormEngine } from '@octarine/form-engine'
+import type { FieldDefinition } from '@octarine/form-engine'
+
+const props = defineProps<{ field: FieldDefinition }>()
+const engine = useFormEngine()
+// The Add button is the summary target for errors on the list itself.
+const { id, path, label } = useField(() => props.field)
+</script>
+
+<template>
+  <fieldset>
+    <legend>{{ label }}</legend>
+    <FormRows :field="field" v-slot="{ index, components, remove }">
+      <FormComponent :components="components" />
+      <button type="button" @click="remove">Remove item {{ index + 1 }}</button>
+    </FormRows>
+    <button :id="id" type="button" @click="engine.addRepeatItem(path)">Add</button>
+  </fieldset>
+</template>
+```
+
+Without a slot, each row renders the field's `components`. The slot gets the
+row's `index`, its `path` (`items.2`), the `components` and `remove`.
+
+**How the row is threaded through**: `FormRows` renders one row per array
 element; each `provide()`s a `RepeatContext` (`{ arrayPath, arrayIndex }`,
 already fully resolved) that any descendant — at any depth — reads back with
 `useRepeatContext()`. This is a deliberate change from how the legacy `_forms`
@@ -562,8 +685,8 @@ intermediate component): several of its list variants forgot to forward them
 correctly, so a field several layers deep silently resolved against the wrong
 row. With `provide`/`inject`, nothing has to remember to forward anything —
 and it composes correctly for **repeats nested inside repeats** for free: an
-inner `FormRepeat` just asks `useRepeatContext()` for the outer row, folds its
-own field's path in, and re-provides for its own descendants.
+inner `FormRows` asks `useRepeatContext()` for the outer row, folds its own
+field's path in, and re-provides for its own descendants.
 
 **Row-scoped conditions, with nothing to remember at the call site**: a plain
 string/`{expression}` condition inside a repeated row evaluates with **that
@@ -602,11 +725,11 @@ validation conditions were not, silently — this structurally rules that out.)
 **Add/remove** always goes through `FormEngine.addRepeatItem(path, item?)` /
 `removeRepeatItem(path, index)` — both re-run `validateModel()` afterward,
 since every row's index (and therefore its validation-result key) shifts on
-add/remove. `FormRepeat`'s default "Add"/"Remove" buttons build a
-well-declared default item via the exported `declareFieldKeys` helper, so a
-freshly-added row's fields are declared (if `undefined`) rather than missing
-entirely — the same reasoning as `FormEngine`'s own top-level field
-declaration, just applied per-row.
+add/remove. A repeat's Add button can build a well-declared default item
+with the exported `declareFieldKeys` helper, so a freshly-added row's fields
+are declared (if `undefined`) rather than missing entirely — the same
+reasoning as `FormEngine`'s own top-level field declaration, just applied
+per-row.
 
 **Deliberately not carried over from legacy**: `lengthProperty`/`maxCount`
 (a separate numeric field auto-resizing the array, with a hard cap) — no

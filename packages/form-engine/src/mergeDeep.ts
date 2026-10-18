@@ -31,3 +31,18 @@ export function mergeDeep(
   }
   return target
 }
+
+// A deep copy with no Vue proxies left in it, at any depth: a row added
+// with `[...items, item]` holds the proxies of the rows before it. For
+// handing the model to an app, or to a new engine.
+export function clonePlain<T>(value: T): T {
+  const raw = toRaw(value)
+  if (Array.isArray(raw)) return raw.map(clonePlain) as T
+  if (raw === null || typeof raw !== 'object') return raw
+  if (Object.getPrototypeOf(raw) !== Object.prototype && Object.getPrototypeOf(raw) !== null) {
+    return structuredClone(raw)
+  }
+  const copy: Record<string, unknown> = {}
+  for (const [key, item] of Object.entries(raw)) copy[key] = clonePlain(item)
+  return copy as T
+}

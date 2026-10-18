@@ -17,14 +17,16 @@ import {
 } from './services'
 import type {
   ConditionValue,
+  FieldDefinition,
   FormDefinition,
+  FormError,
   LocalisableString,
   RepeatContext,
   ValidationResult,
 } from './types'
 import { ValidationService } from './ValidationService'
 import type { ValidatorRegistry } from './validators'
-import { collectHideConditions, findHideConditions, type HideCondition } from './visibility'
+import { collectFields, collectHideConditions, findClosest, type HideCondition } from './visibility'
 
 type FormEngineEvents = {
   modelChanged: { path: string }
@@ -58,6 +60,11 @@ export class FormEngine {
   private _defaults: Record<string, unknown>
   private _constants: Record<string, unknown>
   private _hideConditions: Map<string, HideCondition[][]>
+  private _fields: Map<string, FieldDefinition>
+  // The ids of the mounted controls for each path, in the order they were
+  // mounted. Filled by useField.
+  private _fieldIds = reactive(new Map<string, string[]>())
+  private _locale = ref('')
 
   constructor(
     definition: FormDefinition,
@@ -96,6 +103,20 @@ export class FormEngine {
     )
     this._listService = new ListService(definition.lists, listProvider)
     this._hideConditions = collectHideConditions(definition.components)
+    this._fields = collectFields(definition.components)
+    this._locale.value = this._localisationService.locale
+  }
+
+  get locale(): string {
+    return this._locale.value
+  }
+
+  // Switches the language labels and messages are shown in, keeping
+  // everything that was filled in. `undefined` goes back to the form's
+  // default.
+  setLocale(locale: string | undefined): void {
+    this._localisationService.setLocale(locale)
+    this._locale.value = this._localisationService.locale
   }
 
   get model(): Record<string, unknown> {
@@ -109,7 +130,7 @@ export class FormEngine {
   setValue(path: string, value: unknown): void {
     setProperty(this._model, path, value)
     this._dirtyPaths.add(path)
-    this.validatePath(path)
+    this.revalidate(path)
     this._emitter.emit('modelChanged', { path })
   }
 
@@ -127,7 +148,7 @@ export class FormEngine {
   // show its error (see getError). Fields call this on blur.
   touch(path: string): void {
     this._touchedPaths.add(path)
-    this.validatePath(path)
+    this.revalidate(path)
   }
 
   isTouched(path: string): boolean {
@@ -159,27 +180,50 @@ export class FormEngine {
   // Every error getError would show, in the order the fields appear on
   // screen, rows in row order; paths no field renders come last. For an error
   // summary at the top of the form.
-  getErrors(): Array<{ path: string; message: string }> {
-    const order = [...this._hideConditions.keys()]
-    const position = (path: string) => {
-      const segments = this.resolvePathContext(path).wildcardPath.split('.')
-      for (let length = segments.length; length > 0; length--) {
-        const index = order.indexOf(segments.slice(0, length).join('.'))
-        if (index !== -1) return index
-      }
-      return order.length
-    }
-
-    const errors: Array<{ path: string; message: string }> = []
+  getErrors(): FormError[] {
+    const errors: FormError[] = []
     for (const path of Object.keys(this._validationResults)) {
       const message = this.getError(path)
-      if (message !== undefined) errors.push({ path, message })
+      if (message === undefined) continue
+      const target = this.getFieldId(path)
+      errors.push({ path, message, label: this.getLabel(path), ...(target && { target }) })
     }
-    return errors.sort(
-      (a, b) =>
-        position(a.path) - position(b.path) ||
-        a.path.localeCompare(b.path, undefined, { numeric: true }),
-    )
+    return errors.sort((a, b) => this.compareScreenOrder(a.path, b.path))
+  }
+
+  // A mounted control for `path` gets an id; useField registers it here so
+  // an error summary can link to it. Returns the function that unregisters
+  // it. Ids belong to this engine only: two forms can capture the same path.
+  registerField(path: string, id: string): () => void {
+    this._fieldIds.set(path, [...(this._fieldIds.get(path) ?? []), id])
+    return () => {
+      const ids = [...(this._fieldIds.get(path) ?? [])]
+      const index = ids.indexOf(id)
+      if (index !== -1) ids.splice(index, 1)
+      if (ids.length) this._fieldIds.set(path, ids)
+      else this._fieldIds.delete(path)
+    }
+  }
+
+  // The id of the control to jump to for `path`: the first one mounted for
+  // it, or for a group (`address`, `items`) without a control of its own,
+  // its first control on screen. Undefined when nothing for `path` is
+  // mounted, like a hidden field.
+  getFieldId(path: string): string | undefined {
+    const own = this._fieldIds.get(path)?.[0]
+    if (own) return own
+    const inside = [...this._fieldIds.keys()]
+      .filter((other) => other.startsWith(`${path}.`))
+      .sort((a, b) => this.compareScreenOrder(a, b))[0]
+    return inside === undefined ? undefined : this._fieldIds.get(inside)![0]
+  }
+
+  // The localised label of the field that renders `path`, or of the closest
+  // field containing it; empty when no field does.
+  getLabel(path: string): string {
+    const { wildcardPath, repeatContext } = this.resolvePathContext(path)
+    const field = findClosest(this._fields, wildcardPath)
+    return field?.label === undefined ? '' : this.localise(field.label, repeatContext)
   }
 
   isDirty(path: string): boolean {
@@ -243,6 +287,14 @@ export class FormEngine {
     return () => this._emitter.off(type, handler)
   }
 
+  // Whether this one field is hidden by its own `hide`, in the row it is
+  // rendered in. FormComponent uses it to leave the field out, and isHidden
+  // evaluates every condition on the way to a path through it, so the two
+  // can't disagree.
+  isFieldHidden(field: Pick<FieldDefinition, 'hide'>, repeatContext?: RepeatContext): boolean {
+    return this.resolveCondition(field.hide, false, repeatContext)
+  }
+
   // `definition.validations` is the only source of rules — resolution is
   // driven entirely by that dictionary plus the live model's actual shape.
   // Validation is a model concern: a hidden field is validated like any
@@ -301,13 +353,12 @@ export class FormEngine {
   // `address.street` follows the `address` field it belongs to.
   isHidden(path: string): boolean {
     const { wildcardPath, repeatContexts } = this.resolvePathContext(path)
-    const fields = findHideConditions(this._hideConditions, wildcardPath)
+    const fields = findClosest(this._hideConditions, wildcardPath)
     if (!fields) return false
     return fields.every((conditions) =>
       conditions.some(({ condition, depth }) =>
-        this.resolveCondition(
-          condition,
-          false,
+        this.isFieldHidden(
+          { hide: condition },
           depth === 0 ? undefined : repeatContexts[depth - 1],
         ),
       ),
@@ -330,6 +381,8 @@ export class FormEngine {
 
   localise(key: LocalisableString | undefined, repeatContext?: RepeatContext): string {
     const resolvedKey = typeof key === 'object' ? this.resolveLabelBranch(key, repeatContext) : key
+    // Read the locale here so a label is redrawn when it changes.
+    void this._locale.value
     return this._localisationService.resolve(resolvedKey ?? '')
   }
 
@@ -353,7 +406,35 @@ export class FormEngine {
 
   // What expressions see as `env`: facts about where the form runs.
   private get env(): Record<string, unknown> {
-    return { language: this._localisationService.locale }
+    return { language: this._locale.value }
+  }
+
+  // Validates `path` and every group containing it that has rules of its
+  // own, so an error on `address` follows a change to `address.street`.
+  private revalidate(path: string): void {
+    this.validatePath(path)
+    const segments = path.split('.')
+    for (let length = segments.length - 1; length > 0; length--) {
+      const group = segments.slice(0, length).join('.')
+      if (this.definition.validations?.[this.resolvePathContext(group).wildcardPath]) {
+        this.validatePath(group)
+      }
+    }
+  }
+
+  // Compares paths by where their fields appear on screen, rows in row
+  // order; paths no field renders come last.
+  private compareScreenOrder(a: string, b: string): number {
+    const order = [...this._hideConditions.keys()]
+    const position = (path: string) => {
+      const segments = this.resolvePathContext(path).wildcardPath.split('.')
+      for (let length = segments.length; length > 0; length--) {
+        const index = order.indexOf(segments.slice(0, length).join('.'))
+        if (index !== -1) return index
+      }
+      return order.length
+    }
+    return position(a) - position(b) || a.localeCompare(b, undefined, { numeric: true })
   }
 
   private getRowScope(repeatContext: RepeatContext): Record<string, unknown> {
