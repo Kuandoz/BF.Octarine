@@ -5,13 +5,14 @@ import mitt from 'mitt'
 import {
   collectFields,
   collectHideConditions,
+  collectLockConditions,
   declareFieldKeys,
   defaultListProvider,
   defaultTranslationProvider,
   findClosest,
   FormValidator,
   getProperty,
-  type HideCondition,
+  type FieldCondition,
   INVALID_KEY,
   ListService,
   LocalisationService,
@@ -61,7 +62,8 @@ export class FormEngine {
   private _listService: ListService
   private _defaults: Record<string, unknown>
   private _constants: Record<string, unknown>
-  private _hideConditions: Map<string, HideCondition[][]>
+  private _hideConditions: Map<string, FieldCondition[][]>
+  private _lockConditions: Map<string, FieldCondition[][]>
   private _fields: Map<string, FieldDefinition>
   // The ids of the mounted controls for each path, in the order they were
   // mounted. Filled by useField.
@@ -98,6 +100,7 @@ export class FormEngine {
     )
     this._listService = new ListService(definition.lists, listProvider)
     this._hideConditions = collectHideConditions(definition.components)
+    this._lockConditions = collectLockConditions(definition.components)
     this._fields = collectFields(definition.components)
     this._locale.value = this._localisationService.locale
   }
@@ -153,11 +156,16 @@ export class FormEngine {
     return this._touchedPaths.has(path)
   }
 
-  // Validates every visible field and shows all their errors. Returns whether
-  // the form can be sent.
+  // Validates every field and shows all their errors. Returns whether the
+  // form can be sent: a rule that fails on a value the person can't change
+  // (see isLocked) doesn't stop them, because they couldn't fix it. The
+  // server checks it anyway.
   submit(): boolean {
     this._submitted.value = true
-    return this.validateModel()
+    this.validateModel()
+    return Object.entries(this._validationResults).every(
+      ([path, result]) => result.valid || this.isLocked(path),
+    )
   }
 
   get submitted(): boolean {
@@ -168,8 +176,10 @@ export class FormEngine {
   // changes, but its error only appears once the field was left or a submit
   // was attempted, so nobody is told "invalid email" after typing one letter.
   // Once shown, it follows the value and disappears as soon as it is fixed.
+  // A value the person can't change (see isLocked) never shows an error.
   getError(path: string): string | undefined {
     if (!this._submitted.value && !this._touchedPaths.has(path)) return undefined
+    if (this.isLocked(path)) return undefined
     const result = this.getValidationResult(path)
     if (!result || result.valid) return undefined
     // A rule's own message is the form's text (a localisation key or
@@ -336,6 +346,26 @@ export class FormEngine {
       conditions.some(({ condition, depth }) =>
         this.isFieldHidden(
           { hide: condition },
+          depth === 0 ? undefined : repeatContexts[depth - 1],
+        ),
+      ),
+    )
+  }
+
+  // Whether the person can't change the value at `path`: it is a constant, or
+  // every field that shows it is disabled or read-only, by its own condition
+  // or a container's. Its rules still run (here and on the server); only
+  // their errors aren't shown, since the person couldn't act on them.
+  isLocked(path: string): boolean {
+    if (this.isConstant(path)) return true
+    const { wildcardPath, repeatContexts } = this.resolvePathContext(path)
+    const fields = findClosest(this._lockConditions, wildcardPath)
+    if (!fields) return false
+    return fields.every((conditions) =>
+      conditions.some(({ condition, depth }) =>
+        this.resolveCondition(
+          condition,
+          false,
           depth === 0 ? undefined : repeatContexts[depth - 1],
         ),
       ),

@@ -322,6 +322,13 @@ leaves a field out with the same check, so what is on screen and what the engine
 reports can't disagree. Paths no field renders are never hidden, and
 `address.street` follows the `address` field it belongs to.
 
+**Fields the person can't change don't show errors.** A disabled or read-only
+field (by its own condition or a container's) and a constant are validated like
+any other, but `getError` shows nothing for them and `submit()` doesn't fail on
+them: the person couldn't fix it. The server checks them anyway, and doesn't take
+their values from the client. `engine.isLocked(path)` tells whether a path is one
+of them.
+
 ### Showing errors
 
 `engine.getErrors()` lists every error that shows right now, in the order the

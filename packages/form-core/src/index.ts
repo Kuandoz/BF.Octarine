@@ -38,6 +38,11 @@ export {
   registerValidators,
   skipWhenEmpty,
 } from './validators'
-export { collectFields, collectHideConditions, findClosest } from './visibility'
-export type { HideCondition } from './visibility'
+export {
+  collectFields,
+  collectHideConditions,
+  collectLockConditions,
+  findClosest,
+} from './visibility'
+export type { FieldCondition } from './visibility'
 export { warnOnce } from './warn'

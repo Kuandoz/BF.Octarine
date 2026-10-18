@@ -59,6 +59,8 @@ Done so far:
   `FormValidator` over its reactive model; errors are message keys with parameters, put into words
   only by `getError`; `validateSubmission` and a local `SubmissionValidator` check a submitted
   model the way the browser does.
+- Disabled, read-only and constant values are validated but show no error and don't block the
+  submit (`isLocked`, following containers and rows like `isHidden`).
 - Storybook has a **Forms/Form engine** page with stories (contact form, prefilled, repeat, two
   forms) built on demo field components in `apps/storybook/src/forms/form-engine/`. They are the
   first draft of the `@octarine/forms` field shells (step 6).
