@@ -13,7 +13,9 @@ import {
   type FormValidatorOptions,
   getProperty,
   type FieldCondition,
+  builtInValidators,
   INVALID_KEY,
+  UNAVAILABLE_KEY,
   isEmpty,
   ListService,
   LocalisationService,
@@ -34,8 +36,26 @@ import type {
   LocalisableString,
   RepeatContext,
   TranslationProvider,
+  ValidationPending,
   ValidationResult,
+  Validator,
+  ValidatorContext,
+  ValidatorResult,
 } from './types'
+
+interface AsyncAnswer {
+  key: string
+  promise: Promise<ValidatorResult>
+  result?: ValidatorResult
+  // The check couldn't run; submit() asks again.
+  failed: boolean
+}
+
+const isPendingResult = (result: ValidationResult): result is ValidationPending =>
+  result.valid === false && result.pending === true
+
+const isPromise = (value: unknown): value is Promise<ValidatorResult> =>
+  typeof (value as Promise<unknown> | null)?.then === 'function'
 
 // What counts for dirty state: empty values ('', [], {}, null) are all the
 // same as no value, so typing text and clearing it, or adding a row and
@@ -85,6 +105,10 @@ export class FormEngine {
   private _pristine = shallowRef<Record<string, unknown>>({})
   private _touchedPaths = reactive(new Set<string>())
   private _submitted = ref(false)
+  private _submitting = ref(false)
+  // The last answer of each async rule, per path: reused while the value is
+  // the same, so a change elsewhere doesn't ask the server again.
+  private _asyncAnswers = new Map<string, AsyncAnswer>()
   private _translate: TranslationProvider['t']
   private _fieldTypes: Readonly<Record<string, FieldType>>
   private _validator: FormValidator
@@ -135,7 +159,13 @@ export class FormEngine {
     this._model = reactive(seeded)
     this._pristine.value = clonePlain(seeded)
 
-    this._validator = new FormValidator(definition, { ...rules, repeatTypes })
+    const validators = Object.fromEntries(
+      Object.entries({ ...builtInValidators, ...rules.validators }).map(([type, validator]) => [
+        type,
+        this.rememberAnswers(type, validator),
+      ]),
+    )
+    this._validator = new FormValidator(definition, { ...rules, validators, repeatTypes })
     this._localisationService = new LocalisationService(definition.localisations, locale, {
       t: translate,
     })
@@ -196,12 +226,47 @@ export class FormEngine {
   // form can be sent: a rule that fails on a value the person can't change
   // (see isLocked) doesn't stop them, because they couldn't fix it. The
   // server checks it anyway.
-  submit(): boolean {
+  //
+  // An async rule (one the server checks) is waited for, so the answer is
+  // `false` until every check is in. A check that couldn't run is tried
+  // again on every submit.
+  async submit(): Promise<boolean> {
     this._submitted.value = true
-    this.validateModel()
-    return Object.entries(this._validationResults).every(
-      ([path, result]) => result.valid || this.isLocked(path),
-    )
+    this._submitting.value = true
+    try {
+      for (const [slot, answer] of this._asyncAnswers) {
+        if (answer.failed) this._asyncAnswers.delete(slot)
+      }
+      this.validateModel()
+      for (;;) {
+        const waiting = Object.values(this._validationResults).filter(isPendingResult)
+        if (!waiting.length) break
+        await Promise.all(waiting.map((result) => result.settled))
+        this.validateModel()
+      }
+      return Object.entries(this._validationResults).every(
+        ([path, result]) => result.valid || this.isLocked(path),
+      )
+    } finally {
+      this._submitting.value = false
+    }
+  }
+
+  // True while submit() waits for async rules: a submit button can say so,
+  // and a second submit is ignored by FormRenderer.
+  get submitting(): boolean {
+    return this._submitting.value
+  }
+
+  // Whether an async rule on `path` is still being checked.
+  isPending(path: string): boolean {
+    const result = this._validationResults[path]
+    return result !== undefined && isPendingResult(result)
+  }
+
+  // Whether any async rule is still being checked.
+  get pending(): boolean {
+    return Object.keys(this._validationResults).some((path) => this.isPending(path))
   }
 
   get submitted(): boolean {
@@ -217,7 +282,8 @@ export class FormEngine {
     if (!this._submitted.value && !this._touchedPaths.has(path)) return undefined
     if (this.isLocked(path)) return undefined
     const result = this.getValidationResult(path)
-    if (!result || result.valid) return undefined
+    // A rule still being checked shows nothing until the answer is in.
+    if (!result || result.valid || result.pending) return undefined
     // A rule's own message is the form's text (a localisation key or
     // literal); otherwise the validator's key, in the app's words.
     if (result.message)
@@ -453,6 +519,44 @@ export class FormEngine {
     }
     console.warn('[form-engine] No branch matched in a localisable object', branches)
     return undefined
+  }
+
+  // Wraps a validator so an async answer is kept for the value it was given
+  // and, once in, shown: the form is validated again. An answer for a value
+  // that has changed since is dropped.
+  private rememberAnswers(type: string, validator: Validator): Validator {
+    return (context: ValidatorContext) => {
+      const slot = `${type}|${context.path}`
+      const key = JSON.stringify([context.value ?? null, context.rule])
+      const known = this._asyncAnswers.get(slot)
+      if (known?.key === key) return known.result ?? known.promise
+
+      const outcome = validator(context)
+      if (!isPromise(outcome)) return outcome
+
+      const answer: AsyncAnswer = {
+        key,
+        failed: false,
+        promise: outcome.then(
+          (result) => {
+            answer.result = result
+            return result
+          },
+          (error: unknown) => {
+            answer.failed = true
+            answer.result = { valid: false, key: UNAVAILABLE_KEY }
+            throw error
+          },
+        ),
+      }
+      this._asyncAnswers.set(slot, answer)
+      const current = () => this._asyncAnswers.get(slot) === answer
+      void answer.promise.then(
+        () => current() && this.validateModel(),
+        () => current() && this.validateModel(),
+      )
+      return answer.promise
+    }
   }
 
   // The field type that renders `type`, if the form has one.

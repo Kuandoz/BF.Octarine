@@ -22,14 +22,14 @@ describe('when errors are shown', () => {
     },
   }
 
-  it('validates while typing but keeps the error to itself', () => {
+  it('validates while typing but keeps the error to itself', async () => {
     const engine = new FormEngine(definition)
     engine.setValue('email', 'a')
     expect(engine.getValidationResult('email')?.valid).toBe(false)
     expect(engine.getError('email')).toBeUndefined()
   })
 
-  it('shows the error once the field is left', () => {
+  it('shows the error once the field is left', async () => {
     const engine = new FormEngine(definition)
     engine.setValue('email', 'a')
     engine.touch('email')
@@ -37,13 +37,13 @@ describe('when errors are shown', () => {
     expect(engine.getError('email')).toBe('Enter a valid email address.')
   })
 
-  it('validates a field that is left without typing', () => {
+  it('validates a field that is left without typing', async () => {
     const engine = new FormEngine(definition)
     engine.touch('name')
     expect(engine.getError('name')).toBe('This field is required.')
   })
 
-  it('updates a shown error as the value changes, and clears it once fixed', () => {
+  it('updates a shown error as the value changes, and clears it once fixed', async () => {
     const engine = new FormEngine(definition)
     engine.touch('email')
     expect(engine.getError('email')).toBe('This field is required.')
@@ -53,30 +53,30 @@ describe('when errors are shown', () => {
     expect(engine.getError('email')).toBeUndefined()
   })
 
-  it('shows every error after a submit attempt', () => {
+  it('shows every error after a submit attempt', async () => {
     const engine = new FormEngine(definition)
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
     expect(engine.submitted).toBe(true)
     expect(engine.getError('email')).toBe('This field is required.')
     expect(engine.getError('name')).toBe('This field is required.')
   })
 
-  it('submits when every required value is there', () => {
+  it('submits when every required value is there', async () => {
     const engine = new FormEngine(definition, { model: { email: 'ada@example.com', name: 'Ada' } })
-    expect(engine.submit()).toBe(true)
+    expect(await engine.submit()).toBe(true)
   })
 
-  it('has no error for a field the form only asks for while it is shown', () => {
+  it('has no error for a field the form only asks for while it is shown', async () => {
     const engine = new FormEngine(definition)
     engine.submit()
     expect(engine.getError('phone')).toBeUndefined()
 
     engine.setValue('wantsCall', true)
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
     expect(engine.getError('phone')).toBe('This field is required.')
   })
 
-  it('has text for an error whose validator gave none', () => {
+  it('has text for an error whose validator gave none', async () => {
     const engine = new FormEngine(
       {
         components: [{ type: 'text', path: 'code' }],
@@ -109,13 +109,13 @@ describe('getErrors', () => {
   }
   const model = () => ({ items: Array.from({ length: 11 }, () => ({})) })
 
-  it('lists nothing before errors are shown', () => {
+  it('lists nothing before errors are shown', async () => {
     const engine = new FormEngine(definition, { model: model() })
     engine.validateModel()
     expect(engine.getErrors()).toEqual([])
   })
 
-  it('lists shown errors in the order the fields appear, rows in order, unrendered paths last', () => {
+  it('lists shown errors in the order the fields appear, rows in order, unrendered paths last', async () => {
     const engine = new FormEngine(definition, { model: model() })
     engine.submit()
     const paths = engine.getErrors().map((error) => error.path)
@@ -132,7 +132,7 @@ describe('getErrors', () => {
     })
   })
 
-  it('lists only touched fields before a submit', () => {
+  it('lists only touched fields before a submit', async () => {
     const engine = new FormEngine(definition, { model: model() })
     engine.touch('email')
     expect(engine.getErrors()).toEqual([
@@ -140,7 +140,7 @@ describe('getErrors', () => {
     ])
   })
 
-  it('forgets the errors of a removed row', () => {
+  it('forgets the errors of a removed row', async () => {
     const engine = new FormEngine(definition, { model: { items: [{}, {}] } })
     engine.submit()
     engine.removeRepeatItem('items', 1)
@@ -191,7 +191,7 @@ describe('what an error says about its field', () => {
     },
   }
 
-  it('gives the localised label of the field, and of the group for a nested path', () => {
+  it('gives the localised label of the field, and of the group for a nested path', async () => {
     const engine = new FormEngine(definition, { model: { items: [{}] }, validators: validators })
     expect(engine.getLabel('name')).toBe('Name')
     expect(engine.getLabel('address')).toBe('Address')
@@ -203,7 +203,7 @@ describe('what an error says about its field', () => {
     expect(engine.getLabel('name')).toBe('Naam')
   })
 
-  it('says what a hidden field is about, without a target to jump to', () => {
+  it('says what a hidden field is about, without a target to jump to', async () => {
     const engine = new FormEngine(definition, { model: { phone: 'abc' }, validators: validators })
     engine.submit()
     expect(engine.isHidden('phone')).toBe(true)
@@ -214,7 +214,7 @@ describe('what an error says about its field', () => {
     })
   })
 
-  it('targets the mounted control of a path, the first one when there are more', () => {
+  it('targets the mounted control of a path, the first one when there are more', async () => {
     const engine = new FormEngine(definition)
     const unregisterFirst = engine.registerField('name', 'first')
     engine.registerField('name', 'second')
@@ -223,7 +223,7 @@ describe('what an error says about its field', () => {
     expect(engine.getFieldId('name')).toBe('second')
   })
 
-  it('targets the first control on screen inside a group without its own', () => {
+  it('targets the first control on screen inside a group without its own', async () => {
     const engine = new FormEngine(definition, { model: {}, validators: validators })
     engine.registerField('address.city', 'city')
     engine.registerField('address.street', 'street')
@@ -236,7 +236,7 @@ describe('what an error says about its field', () => {
     })
   })
 
-  it("targets a group's own control when it registered one, like a repeat's Add button", () => {
+  it("targets a group's own control when it registered one, like a repeat's Add button", async () => {
     const engine = new FormEngine(definition, { model: { items: [{}] } })
     engine.registerField('items.0.title', 'title')
     engine.registerField('items', 'add')
@@ -244,7 +244,7 @@ describe('what an error says about its field', () => {
     expect(engine.getFieldId('items.0')).toBe('title')
   })
 
-  it('updates the error of a group when a value inside it changes', () => {
+  it('updates the error of a group when a value inside it changes', async () => {
     const engine = new FormEngine(definition, { model: {}, validators: validators })
     engine.submit()
     expect(engine.getError('address')).toBe('Fill in a street or a city.')
@@ -267,16 +267,16 @@ describe('rules that depend on other fields', () => {
     },
   }
 
-  it('update when the value they depend on changes, after a submit', () => {
+  it('update when the value they depend on changes, after a submit', async () => {
     const engine = new FormEngine(definition)
-    expect(engine.submit()).toBe(true)
+    expect(await engine.submit()).toBe(true)
     engine.setValue('wantsCall', true)
     expect(engine.getErrors().map((error) => error.path)).toEqual(['phone'])
     engine.setValue('wantsCall', false)
     expect(engine.getErrors()).toEqual([])
   })
 
-  it("stay quiet for a field that wasn't left yet, before a submit", () => {
+  it("stay quiet for a field that wasn't left yet, before a submit", async () => {
     const engine = new FormEngine(definition)
     engine.setValue('start', '2026-01-01')
     expect(engine.getValidationResult('end')?.valid).toBe(false)

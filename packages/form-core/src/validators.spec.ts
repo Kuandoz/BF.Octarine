@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ValidationRule } from '@octarine/form-abstractions'
+import type { ValidationRule, ValidatorResult } from '@octarine/form-abstractions'
 import {
   createValidatorContext,
   builtInValidators,
@@ -18,7 +18,8 @@ function run(
   scope: Record<string, unknown> = {},
 ) {
   const context = createValidatorContext(value, { type, ...rule }, 'field', scope)
-  return registry[type]!(context)
+  // The built-in validators are synchronous.
+  return registry[type]!(context) as ValidatorResult
 }
 
 describe('createValidatorContext', () => {

@@ -93,7 +93,7 @@ function mountTwo(a: FormProps, b: FormProps = a) {
 }
 
 describe('two forms on one page', () => {
-  it('give each form its own engine', () => {
+  it('give each form its own engine', async () => {
     const { wrapper, a, b } = mountTwo({ definition: personForm() })
     expect(a.engine).not.toBe(b.engine)
     wrapper.unmount()
@@ -139,7 +139,7 @@ describe('two forms on one page', () => {
   it('submit one form without showing errors in the other', async () => {
     const { wrapper, a, b } = mountTwo({ definition: personForm() })
 
-    expect(a.engine.submit()).toBe(false)
+    expect(await a.engine.submit()).toBe(false)
     await wrapper.vm.$nextTick()
 
     expect(a.engine.getErrors()).toHaveLength(1)
@@ -154,8 +154,8 @@ describe('two forms on one page', () => {
 
     await a.el.find('[data-path="person.name"] input').setValue('Ada')
 
-    expect(a.engine.submit()).toBe(true)
-    expect(b.engine.submit()).toBe(false)
+    expect(await a.engine.submit()).toBe(true)
+    expect(await b.engine.submit()).toBe(false)
     wrapper.unmount()
   })
 
@@ -184,8 +184,8 @@ describe('two forms on one page', () => {
     expect(a.el.find('[data-path="contact.note"] .required').exists()).toBe(false)
     expect(b.el.find('[data-path="contact.note"] .required').exists()).toBe(true)
 
-    expect(a.engine.submit()).toBe(false) // phone is shown and empty
-    expect(b.engine.submit()).toBe(false) // note is required, phone is not asked for
+    expect(await a.engine.submit()).toBe(false) // phone is shown and empty
+    expect(await b.engine.submit()).toBe(false) // note is required, phone is not asked for
     expect(a.engine.getErrors().map((e) => e.path)).toEqual(['contact.phone'])
     expect(b.engine.getErrors().map((e) => e.path)).toEqual(['contact.note'])
     wrapper.unmount()
@@ -224,7 +224,7 @@ describe('two forms on one page', () => {
     wrapper.unmount()
   })
 
-  it('localise each form in its own language', () => {
+  it('localise each form in its own language', async () => {
     const definition = (): FormDefinition => ({
       components: [{ type: 'text', path: 'person.name', label: 'name' }],
       localisations: { default: 'en', en: { name: 'Name' }, nl: { name: 'Naam' } },
@@ -239,7 +239,7 @@ describe('two forms on one page', () => {
     wrapper.unmount()
   })
 
-  it('use field types passed to one form only in that form', () => {
+  it('use field types passed to one form only in that form', async () => {
     const Fancy = defineComponent({
       props: ['field'],
       setup: () => () => h('div', { class: 'fancy' }),
@@ -257,7 +257,7 @@ describe('two forms on one page', () => {
     wrapper.unmount()
   })
 
-  it('use validators passed to one form only in that form', () => {
+  it('use validators passed to one form only in that form', async () => {
     const definition = (): FormDefinition => ({
       components: [{ type: 'text', path: 'person.name' }],
       validations: { 'person.name': [{ type: 'neverValid' }] },
@@ -270,16 +270,16 @@ describe('two forms on one page', () => {
       { definition: definition() },
     )
 
-    expect(a.engine.submit()).toBe(false)
+    expect(await a.engine.submit()).toBe(false)
     expect(a.engine.getErrors()).toMatchObject([
       { path: 'person.name', message: "This value isn't valid." },
     ])
     // An unknown rule type is skipped, so the other form stays valid.
-    expect(b.engine.submit()).toBe(true)
+    expect(await b.engine.submit()).toBe(true)
     wrapper.unmount()
   })
 
-  it('give fields with the same path different ids', () => {
+  it('give fields with the same path different ids', async () => {
     const { wrapper, a, b } = mountTwo({ definition: personForm() })
 
     const idA = a.el.get('[data-path="person.name"] input').attributes('id')
@@ -291,7 +291,7 @@ describe('two forms on one page', () => {
     wrapper.unmount()
   })
 
-  it("link each form's error summary to that form's own field", () => {
+  it("link each form's error summary to that form's own field", async () => {
     const { wrapper, a, b } = mountTwo({ definition: personForm() })
 
     a.engine.submit()

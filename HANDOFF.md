@@ -61,6 +61,9 @@ Done so far:
   model the way the browser does.
 - Disabled, read-only and constant values are validated but show no error and don't block the
   submit (`isLocked`, following containers and rows like `isHidden`).
+- The engine API (step 3): `createForms` + `defineField` + `useForm` instead of global
+  registries and positional parameters; dirty state with `markPristine`/`reset`; async rules
+  with a pending state and `delegateToServer`.
 - Storybook has a **Forms/Form engine** page with stories (contact form, prefilled, repeat, two
   forms) built on demo field components in `apps/storybook/src/forms/form-engine/`. They are the
   first draft of the `@octarine/forms` field shells (step 6).
@@ -173,7 +176,7 @@ All items done. Left over, for later steps:
 - [ ] `FormEngine.spec.ts` and `expressions.spec.ts` still test some rules through the engine;
       move pure ones to form-core when touching them.
 
-### 3. Engine API redesign
+### 3. Engine API redesign (done)
 
 - [x] `createForms(options)` (fields, validators, functions, expressionLanguages, repeatTypes,
       lists, translate) replaces the global registries and `provideFormRendererServices`. The rule
@@ -189,7 +192,19 @@ All items done. Left over, for later steps:
 - [x] The app's `model` is never changed: the engine works on a copy (documented).
 - [x] mitt is gone; apps can `watch(engine.model)`.
 - [x] Configurable expression functions, added to `age()`.
-- [ ] Async validators with a pending state; delegating a rule to the server.
+- [x] Async validators with a pending state (`isPending`, `pending`, `submitting`, `aria-busy`);
+      `submit()` is async and waits; a check that can't run fails closed and is retried on submit.
+      `delegateToServer(submissionValidator)` leaves a rule to the server; validators get `model`,
+      `definition` and `env`. `validateSubmission` is async.
+
+Left over:
+
+- [ ] An async answer is reused while the path's own value is the same; a server rule that also
+      depends on other fields isn't asked again when they change.
+- [ ] No debounce: an async validator called on every keystroke should debounce itself. A helper
+      may be worth adding once a real one exists.
+- [ ] `delegateToServer` sends the whole model for one rule; a remote `SubmissionValidator` that
+      can check one rule would be cheaper (step 10).
 
 ### 4. Localisation
 
@@ -222,6 +237,8 @@ every theme), then add its `defineField` in `@octarine/forms`.
 - [ ] The demo checkbox is a native one: `@octarine/vue` has no checkbox yet.
 - [ ] The engine's validation messages are English only until step 4; the demo's labels follow
       the page language, its errors don't yet.
+- [ ] Field shells show `pending` ("Checking…") in a polite live region, and the submit button
+      follows `submitting`.
 - [ ] Controls: Textarea, Select, Checkbox, Checkbox group, Radio group, Switch, Number, Date.
 - [ ] Harder ones: Combobox/autocomplete and file upload (full WAI-ARIA keyboard patterns).
 - [ ] Repeat component on `FormRows` with Add/Remove.

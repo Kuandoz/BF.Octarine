@@ -1,4 +1,4 @@
-import type { ValidationRule } from './definition'
+import type { FormDefinition, ValidationRule } from './definition'
 
 // Errors are message keys with parameters, not text: the server can
 // translate them, or hand them back for the client to translate. Text is
@@ -27,6 +27,11 @@ export interface ValidatorContext {
   // `rule.path`) resolves against — the current row's own fields inside a
   // `repeat`, otherwise the whole model.
   scope: Record<string, unknown>
+  // The whole model, the form and `env`: for a rule that needs more than
+  // its own value, like one that asks the server (see delegateToServer).
+  model: Record<string, unknown>
+  definition: FormDefinition
+  env: Record<string, unknown>
 }
 
 // A JSON Schema, as plain data. The schema for form definitions (step 5 in
@@ -34,7 +39,9 @@ export interface ValidatorContext {
 export type JsonSchema = { [keyword: string]: unknown }
 
 export interface Validator {
-  (context: ValidatorContext): ValidatorResult
+  // A promise for a rule that has to wait, like one the server checks. The
+  // engine shows the path as pending until it settles.
+  (context: ValidatorContext): ValidatorResult | Promise<ValidatorResult>
   // The rule's own parameters (`value`, `values`, …) as the properties of
   // an object schema, e.g. `{ properties: { value: { type: 'number' } } }`.
   readonly schema?: JsonSchema
@@ -42,11 +49,23 @@ export interface Validator {
 
 export type ValidatorRegistry = Record<string, Validator>
 
-// The outcome of a path's rules: the first one that failed, if any.
-export type ValidationResult = { valid: true } | ValidationFailure
+// The outcome of a path's rules: the first one that failed, if any, or the
+// one still being checked.
+export type ValidationResult = { valid: true } | ValidationFailure | ValidationPending
+
+// A rule is still being checked (its validator returned a promise). Counts as
+// not valid until it settles, so nothing is sent before the answer is in.
+export interface ValidationPending {
+  valid: false
+  pending: true
+  rule: string
+  // The outcome once every rule of the path ran; never pending itself.
+  settled: Promise<ValidationResult>
+}
 
 export interface ValidationFailure {
   valid: false
+  pending?: undefined
   // The rule's `type`, e.g. 'required'.
   rule: string
   key: string

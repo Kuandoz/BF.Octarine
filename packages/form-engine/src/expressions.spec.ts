@@ -33,13 +33,13 @@ const toy: ExpressionLanguage = {
 }
 
 describe('findExpressionLanguage', () => {
-  it('picks the language by name, js by default', () => {
+  it('picks the language by name, js by default', async () => {
     const js: ExpressionLanguage = { name: 'js', compile: toy.compile }
     expect(findExpressionLanguage([js, toy])).toBe(js)
     expect(findExpressionLanguage([js, toy], 'toy')).toBe(toy)
   })
 
-  it('fails for a language nobody registered', () => {
+  it('fails for a language nobody registered', async () => {
     expect(() => findExpressionLanguage([toy], 'feel')).toThrow(
       'The form uses expression language "feel", but only "toy" is registered.',
     )
@@ -47,7 +47,7 @@ describe('findExpressionLanguage', () => {
 })
 
 describe('withExpressionLanguages', () => {
-  it('adds languages to the built-in js, and replaces js when given one', () => {
+  it('adds languages to the built-in js, and replaces js when given one', async () => {
     expect(withExpressionLanguages([toy]).map((language) => language.name)).toEqual(['toy', 'js'])
     const myJs: ExpressionLanguage = { name: 'js', compile: toy.compile }
     expect(withExpressionLanguages([myJs])).toEqual([myJs])
@@ -55,7 +55,7 @@ describe('withExpressionLanguages', () => {
 })
 
 describe('ExpressionService with another language', () => {
-  it('evaluates through the language, with the engine handling scope and root', () => {
+  it('evaluates through the language, with the engine handling scope and root', async () => {
     const service = new ExpressionService(toy)
     expect(service.resolve('mode is phone', { scope: { mode: 'phone' } })).toBe(true)
     expect(
@@ -66,20 +66,20 @@ describe('ExpressionService with another language', () => {
     ).toBe(true)
   })
 
-  it('passes the functions and env to the language', () => {
+  it('passes the functions and env to the language', async () => {
     const service = new ExpressionService(toy, { adult: (age) => (age as number) >= 18 })
     expect(service.resolve('adult(age)', { scope: { age: 20 } })).toBe(true)
     expect(service.resolve('env language is nl', { scope: {}, env: { language: 'nl' } })).toBe(true)
   })
 
-  it('falls back to the default when the language rejects an expression', () => {
+  it('falls back to the default when the language rejects an expression', async () => {
     const service = new ExpressionService(toy)
     expect(service.resolve('???', { scope: {} }, true)).toBe(true)
     expect(service.resolve('???', { scope: {} }, false)).toBe(false)
     expect(() => service.compile('???')).toThrow(ExpressionError)
   })
 
-  it('compiles each source once', () => {
+  it('compiles each source once', async () => {
     let compiles = 0
     const counting: ExpressionLanguage = {
       name: 'toy',
@@ -101,7 +101,7 @@ describe('a form written in another language', () => {
     validations: { phone: [{ type: 'required', condition: 'mode is phone' }] },
   })
 
-  it('uses it for hide, rule conditions and required markers', () => {
+  it('uses it for hide, rule conditions and required markers', async () => {
     const engine = new FormEngine(definition(), {
       model: { mode: 'phone', wantsCall: true },
       expressionLanguages: withExpressionLanguages([toy]),
@@ -109,21 +109,21 @@ describe('a form written in another language', () => {
 
     expect(engine.isHidden('phone')).toBe(false)
     expect(engine.isRequired('phone')).toBe(true)
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
 
     engine.setValue('wantsCall', false)
     expect(engine.isHidden('phone')).toBe(true)
 
     engine.setValue('mode', 'mail')
     expect(engine.isRequired('phone')).toBe(false)
-    expect(engine.submit()).toBe(true)
+    expect(await engine.submit()).toBe(true)
   })
 
-  it('fails to construct when the language is not registered', () => {
+  it('fails to construct when the language is not registered', async () => {
     expect(() => new FormEngine(definition())).toThrow('expression language "toy"')
   })
 
-  it('gets the language from createForms', () => {
+  it('gets the language from createForms', async () => {
     const Field = defineComponent({
       props: ['field'],
       setup: (props) => () => h('div', { class: 'field' }, props.field.path),

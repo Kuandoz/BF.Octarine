@@ -60,14 +60,14 @@ function engineOf(wrapper: ReturnType<typeof mount>): FormEngine {
 }
 
 describe('FormRenderer', () => {
-  it('renders a form that leaves validation to the engine', () => {
+  it('renders a form that leaves validation to the engine', async () => {
     const wrapper = mountWithForms(FormRenderer, { props: { definition: definition() } })
     const form = wrapper.get('form')
     expect(form.attributes('novalidate')).toBeDefined()
     expect(form.find('[data-path="name"] input').exists()).toBe(true)
   })
 
-  it('passes attributes like a name to the form', () => {
+  it('passes attributes like a name to the form', async () => {
     const wrapper = mountWithForms(FormRenderer, {
       props: { definition: definition() },
       attrs: { 'aria-label': 'Contact', class: 'my-form' },
@@ -113,14 +113,14 @@ describe('FormRenderer', () => {
     expect(engineOf(wrapper).getValue('items.0.title')).toBe('a')
   })
 
-  it('exposes submit, for a button outside the form', () => {
+  it('exposes submit, for a button outside the form', async () => {
     const wrapper = mountWithForms(FormRenderer, { props: { definition: definition() } })
-    const renderer = wrapper.vm as unknown as { submit(): boolean }
-    expect(renderer.submit()).toBe(false)
+    const renderer = wrapper.vm as unknown as { submit(): Promise<boolean> }
+    expect(await renderer.submit()).toBe(false)
     expect(wrapper.emitted('invalid')).toHaveLength(1)
   })
 
-  it('renders slots above and below the fields, with the engine', () => {
+  it('renders slots above and below the fields, with the engine', async () => {
     const wrapper = mountWithForms(FormRenderer, {
       props: { definition: definition() },
       slots: {
@@ -244,7 +244,7 @@ describe('FormRenderer', () => {
     expect(engineOf(wrapper)).toBe(toRaw(form!.value))
   })
 
-  it('needs a form or a definition', () => {
+  it('needs a form or a definition', async () => {
     expect(() => mountWithForms(FormRenderer)).toThrow('needs a "form" or a "definition"')
   })
 })

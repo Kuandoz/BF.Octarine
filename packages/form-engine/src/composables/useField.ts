@@ -58,6 +58,8 @@ export interface Field<T> {
   readonly: ComputedRef<boolean>
   // The error to show now: after the field was left, or after a submit.
   error: ComputedRef<string | undefined>
+  // An async rule (one the server checks) is still being checked.
+  pending: ComputedRef<boolean>
   // Call when the user leaves the field, so its error starts to show.
   onBlur: () => void
   // The field's own settings for its control (`maxLength`, `options`, ...):
@@ -117,6 +119,7 @@ export function useField<T = unknown>(
     engine.resolveCondition(definition.value.readonly, false, repeatContext),
   )
   const error = computed(() => engine.getError(path.value))
+  const pending = computed(() => engine.isPending(path.value))
   const attrs = computed(() => {
     const result: Record<string, unknown> = {}
     for (const [key, attrValue] of Object.entries(definition.value)) {
@@ -135,6 +138,7 @@ export function useField<T = unknown>(
     disabled,
     readonly,
     error,
+    pending,
     onBlur: () => engine.touch(path.value),
     attrs,
   }

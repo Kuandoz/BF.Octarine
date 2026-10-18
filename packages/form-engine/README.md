@@ -500,11 +500,50 @@ validations: {
 For rules of a single form, pass `validators` to `useForm` (or
 `createEngine`); they are added to the app's for that form only.
 
-Validators are synchronous by design — `setValue` runs validation inline and
-the result is available immediately after the call returns. Remote/async
-validation (e.g. a server-side uniqueness check) is intentionally not
-supported yet; it would change `setValue`'s contract and is left as a future
-extension rather than something bolted on now.
+### Async rules and the server
+
+A validator may return a promise, for a rule that has to wait (is this email
+address taken?). Until it settles the path is **pending**:
+
+- `engine.isPending(path)` and `engine.pending` (any path) say so, and
+  `useField` returns `pending` for a "Checking…" text;
+- `getError` shows nothing for the path yet, and the result counts as not
+  valid, so nothing is sent before the answer is in;
+- the answer is kept for the value it was given: a change elsewhere in the
+  form doesn't ask again, and an answer for a value that changed since is
+  dropped. A validator that calls a server on every keystroke should debounce
+  itself.
+
+`await engine.submit()` waits for every pending rule. While it waits,
+`engine.submitting` is true, `FormRenderer` marks the `<form>` with
+`aria-busy` and ignores a second submit. A check that couldn't run (the
+promise rejected, or the validator threw) fails closed with
+`formRenderer.validation.unavailable` ("This couldn't be checked right now.
+Try again later.") and is tried again on the next submit.
+
+**A rule that needs data only the server has** stays on the server.
+Register the real validator there; on the client, register
+`delegateToServer(remote)` under the same type. It sends the model to a
+`SubmissionValidator` and takes the server's answer for that path and rule, so
+there is still one implementation:
+
+```ts
+// rules.ts, shared: the server's real check
+export const rules = {
+  validators: {
+    uniqueEmail: async ({ value }) => ({
+      valid: !(await db.emailExists(value)),
+      key: 'app.emailTaken',
+    }),
+  },
+}
+
+// the app
+createForms({ fields, validators: { ...rules.validators, uniqueEmail: delegateToServer(remote) } })
+```
+
+A validator gets the whole `model`, the `definition` and `env` in its
+context for this.
 
 A field shows its required marker from `formEngine.isRequired(path)`: true when
 the path has a `required` rule whose `condition` (if any) holds right now,

@@ -19,24 +19,24 @@ describe('isRequired', () => {
     },
   }
 
-  it('is true for an unconditional required rule', () => {
+  it('is true for an unconditional required rule', async () => {
     expect(new FormEngine(definition).isRequired('name')).toBe(true)
   })
 
-  it('is false without a required rule', () => {
+  it('is false without a required rule', async () => {
     const engine = new FormEngine(definition)
     expect(engine.isRequired('nickname')).toBe(false)
     expect(engine.isRequired('unknown')).toBe(false)
   })
 
-  it("follows a required rule's condition", () => {
+  it("follows a required rule's condition", async () => {
     const engine = new FormEngine(definition)
     expect(engine.isRequired('vatNumber')).toBe(false)
     engine.setValue('company', true)
     expect(engine.isRequired('vatNumber')).toBe(true)
   })
 
-  it('stays required when the condition throws, like validation does', () => {
+  it('stays required when the condition throws, like validation does', async () => {
     const engine = new FormEngine({
       components: [],
       validations: { code: [{ type: 'required', condition: 'missing.deeply.nested' }] },
@@ -45,7 +45,7 @@ describe('isRequired', () => {
     expect(engine.validateModel()).toBe(false)
   })
 
-  it("evaluates a row's condition against that row", () => {
+  it("evaluates a row's condition against that row", async () => {
     const engine = new FormEngine(
       {
         components: [
@@ -76,14 +76,14 @@ describe('rule conditions and env', () => {
     },
   })
 
-  it('is required and validated when the condition on env holds', () => {
+  it('is required and validated when the condition on env holds', async () => {
     const engine = new FormEngine(definition(), { model: {}, locale: 'fr' })
     expect(engine.isHidden('vatNumber')).toBe(false)
     expect(engine.isRequired('vatNumber')).toBe(true)
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
   })
 
-  it('is not required when it does not', () => {
+  it('is not required when it does not', async () => {
     const engine = new FormEngine(definition(), { model: {}, locale: 'nl' })
     expect(engine.isRequired('vatNumber')).toBe(false)
   })

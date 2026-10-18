@@ -40,7 +40,7 @@ const definition = (): FormDefinition => ({
 })
 
 describe('fields the person cannot change', () => {
-  it('still validates them', () => {
+  it('still validates them', async () => {
     const engine = new FormEngine(definition(), { model: { locked: true } })
     engine.validateModel()
     expect(engine.getValidationResult('reference')).toMatchObject({ valid: false })
@@ -48,7 +48,7 @@ describe('fields the person cannot change', () => {
     expect(engine.getValidationResult('country')).toMatchObject({ valid: false })
   })
 
-  it('shows no error for a disabled, read-only or constant value', () => {
+  it('shows no error for a disabled, read-only or constant value', async () => {
     const engine = new FormEngine(definition(), { model: { locked: true, name: 'Ann' } })
     engine.submit()
     expect(engine.getError('reference')).toBeUndefined()
@@ -57,7 +57,7 @@ describe('fields the person cannot change', () => {
     expect(engine.getErrors()).toEqual([])
   })
 
-  it('follows a container that is disabled', () => {
+  it('follows a container that is disabled', async () => {
     const engine = new FormEngine(definition(), { model: { locked: true } })
     engine.submit()
     expect(engine.isLocked('address.city')).toBe(true)
@@ -68,7 +68,7 @@ describe('fields the person cannot change', () => {
     expect(engine.getError('address.city')).toBe('This field is required.')
   })
 
-  it('evaluates a condition in its row', () => {
+  it('evaluates a condition in its row', async () => {
     const engine = new FormEngine(definition(), {
       model: {
         items: [{ done: true }, { done: false }],
@@ -79,14 +79,14 @@ describe('fields the person cannot change', () => {
     expect(engine.getError('items.1.note')).toBe('This field is required.')
   })
 
-  it("doesn't let those errors stop the submit", () => {
+  it("doesn't let those errors stop the submit", async () => {
     const engine = new FormEngine(definition(), { model: { locked: true, name: 'Ann' } })
-    expect(engine.submit()).toBe(true)
+    expect(await engine.submit()).toBe(true)
   })
 
-  it('still stops the submit for an error the person can fix', () => {
+  it('still stops the submit for an error the person can fix', async () => {
     const engine = new FormEngine(definition(), { model: { locked: true } })
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
     expect(engine.getErrors().map((error) => error.path)).toEqual(['name'])
   })
 })

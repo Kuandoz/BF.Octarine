@@ -20,9 +20,10 @@ them.
 
 | Type                | What it is                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------------ |
-| `ValidatorResult`   | What a validator returns: `{ valid, key?, params? }`.                                            |
+| `ValidatorResult`   | What a validator returns: `{ valid, key?, params? }`, or a promise of it.                        |
 | `ValidationResult`  | The outcome of a path's rules: `{ valid: true }` or a `ValidationFailure`.                       |
 | `ValidationFailure` | `{ valid: false, rule, key, params?, message? }`: the first rule that failed, as a message key.  |
+| `ValidationPending` | `{ valid: false, pending: true, rule, settled }`: an async rule is still being checked.          |
 | `SubmissionResult`  | `{ valid, errors }` for a whole submission; each `SubmissionError` is a failure with its `path`. |
 
 Errors are message keys with parameters, never text, so the server can translate them or hand them

@@ -60,9 +60,12 @@ const EngineScope = defineComponent({
   },
 })
 
-function submit(): boolean {
+// Waits for async rules. A second submit while one waits is ignored, so a
+// double click sends once.
+async function submit(): Promise<boolean> {
   const current = engine.value
-  const valid = current.submit()
+  if (current.submitting) return false
+  const valid = await current.submit()
   if (valid) emit('submit', clonePlain(current.model))
   else emit('invalid', current.getErrors())
   return valid
@@ -72,7 +75,7 @@ defineExpose({ engine, submit })
 </script>
 
 <template>
-  <form novalidate @submit.prevent="submit">
+  <form novalidate :aria-busy="engine.submitting || undefined" @submit.prevent="submit">
     <EngineScope :key="generation" :engine="engine">
       <slot name="before" :engine="engine" />
       <FormComponent :components="engine.definition.components" />

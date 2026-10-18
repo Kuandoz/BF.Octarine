@@ -26,7 +26,7 @@ const textField = defineField({
 })
 
 describe('createForms', () => {
-  it('gives every form its field types, validators and functions', () => {
+  it('gives every form its field types, validators and functions', async () => {
     const forms = createForms({
       fields: [textField],
       validators: { even: ({ value }) => ({ valid: Number(value) % 2 === 0, key: 'even' }) },
@@ -41,14 +41,14 @@ describe('createForms', () => {
       { model: { n: 3 } },
     )
     expect(engine.getFieldType('text')).toBe(textField)
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
     expect(engine.getError('n')).toBe('t:even')
     expect(engine.resolveCondition('double(n) === 6')).toBe(true)
     // age() stays available next to the app's own functions.
     expect(engine.resolveCondition("age('2000-01-01') > 18")).toBe(true)
   })
 
-  it("adds a form's own validators to the app's", () => {
+  it("adds a form's own validators to the app's", async () => {
     const forms = createForms({
       validators: { a: () => ({ valid: false, key: 'a' }) },
     })
@@ -61,14 +61,14 @@ describe('createForms', () => {
     expect(engine.getValidationResult('y')).toMatchObject({ key: 'b' })
   })
 
-  it("doesn't share anything between two setups", () => {
+  it("doesn't share anything between two setups", async () => {
     const one = createForms({ fields: [textField] })
     const other = createForms()
     expect(one.createEngine({ components: [] }).getFieldType('text')).toBe(textField)
     expect(other.createEngine({ components: [] }).getFieldType('text')).toBeUndefined()
   })
 
-  it('is what useForms returns below app.use(forms)', () => {
+  it('is what useForms returns below app.use(forms)', async () => {
     const forms = createForms()
     let found: unknown
     mount(
@@ -85,7 +85,7 @@ describe('createForms', () => {
 })
 
 describe('defineField', () => {
-  it('declares a field type with rows', () => {
+  it('declares a field type with rows', async () => {
     const Travellers = defineComponent({
       props: { field: { type: Object, required: true } },
       setup: (props) => () => h('div', [h(FormRows, { field: props.field as FieldDefinition })]),
@@ -115,14 +115,14 @@ describe('defineField', () => {
     const engine = (
       wrapper.vm as unknown as { engine: { submit(): boolean; getErrors(): unknown } }
     ).engine
-    expect(engine.submit()).toBe(false)
+    expect(await engine.submit()).toBe(false)
     // The row's field gives the error its label, as for a built-in repeat.
     expect(engine.getErrors()).toMatchObject([{ path: 'people.1.name', label: 'Name' }])
   })
 })
 
 describe('useForm', () => {
-  it('works without an installed setup, with only the built-in rules', () => {
+  it('works without an installed setup, with only the built-in rules', async () => {
     let errors: unknown
     mount(
       defineComponent({

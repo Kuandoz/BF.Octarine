@@ -38,12 +38,16 @@ export function createValidatorContext(
   rule: ValidationRule,
   path: string,
   scope: Record<string, unknown> = {},
+  form: Partial<Pick<ValidatorContext, 'model' | 'definition' | 'env'>> = {},
 ): ValidatorContext {
   return {
     value,
     rule,
     path,
     scope,
+    model: form.model ?? scope,
+    definition: form.definition ?? { components: [] },
+    env: form.env ?? {},
     get isEmpty() {
       return isEmpty(value)
     },
@@ -55,7 +59,7 @@ export function createValidatorContext(
  * the definition schema. A plain function is a validator too.
  */
 export function defineValidator(definition: {
-  validate: (context: ValidatorContext) => ValidatorResult
+  validate: (context: ValidatorContext) => ValidatorResult | Promise<ValidatorResult>
   schema?: JsonSchema
 }): Validator {
   const validate = (context: ValidatorContext) => definition.validate(context)

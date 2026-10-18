@@ -18,15 +18,17 @@ const definition: FormDefinition = {
 }
 
 describe('validateSubmission', () => {
-  it('passes a model that meets every rule', () => {
-    expect(validateSubmission(definition, { name: 'Ann', items: [{ quantity: '2' }] })).toEqual({
+  it('passes a model that meets every rule', async () => {
+    expect(
+      await validateSubmission(definition, { name: 'Ann', items: [{ quantity: '2' }] }),
+    ).toEqual({
       valid: true,
       errors: [],
     })
   })
 
-  it('reports each failed rule as a key with parameters, not text', () => {
-    const result = validateSubmission(definition, { name: 'An' })
+  it('reports each failed rule as a key with parameters, not text', async () => {
+    const result = await validateSubmission(definition, { name: 'An' })
     expect(result.valid).toBe(false)
     expect(result.errors).toEqual([
       {
@@ -38,8 +40,8 @@ describe('validateSubmission', () => {
     ])
   })
 
-  it("passes the rule's own message on, for the edge to localise", () => {
-    const { errors } = validateSubmission(definition, { name: 'Ann', callMe: true })
+  it("passes the rule's own message on, for the edge to localise", async () => {
+    const { errors } = await validateSubmission(definition, { name: 'Ann', callMe: true })
     expect(errors).toEqual([
       {
         path: 'phone',
@@ -50,23 +52,23 @@ describe('validateSubmission', () => {
     ])
   })
 
-  it('expands rows against the submitted model', () => {
-    const { errors } = validateSubmission(definition, {
+  it('expands rows against the submitted model', async () => {
+    const { errors } = await validateSubmission(definition, {
       name: 'Ann',
       items: [{ quantity: '1' }, { quantity: 'two' }, { quantity: 'x' }],
     })
     expect(errors.map((error) => error.path)).toEqual(['items.1.quantity', 'items.2.quantity'])
   })
 
-  it('validates hidden fields like any other', () => {
+  it('validates hidden fields like any other', async () => {
     const hidden: FormDefinition = {
       components: [{ type: 'text', path: 'code', hide: true }],
       validations: { code: [{ type: 'required' }] },
     }
-    expect(validateSubmission(hidden, {}).valid).toBe(false)
+    expect((await validateSubmission(hidden, {})).valid).toBe(false)
   })
 
-  it('uses the validators and env it is given', () => {
+  it('uses the validators and env it is given', async () => {
     const custom: FormDefinition = {
       components: [],
       validations: {
@@ -74,7 +76,7 @@ describe('validateSubmission', () => {
         note: [{ type: 'required', condition: "env.language === 'nl'" }],
       },
     }
-    const result = validateSubmission(
+    const result = await validateSubmission(
       custom,
       { code: 3 },
       {
@@ -101,28 +103,28 @@ describe('validateSubmission', () => {
 })
 
 describe('validateSubmission and missing keys', () => {
-  it('reads a field the model leaves out as undefined, as the browser does', () => {
+  it('reads a field the model leaves out as undefined, as the browser does', async () => {
     // Without `callMe` in the model, `callMe === true` must be false, not an
     // unknown name that keeps the rule active.
-    expect(validateSubmission(definition, { name: 'Ann' }).valid).toBe(true)
+    expect((await validateSubmission(definition, { name: 'Ann' })).valid).toBe(true)
   })
 
-  it("doesn't change the model it is given", () => {
+  it("doesn't change the model it is given", async () => {
     const model = { name: 'Ann' }
-    validateSubmission(definition, model)
+    await validateSubmission(definition, model)
     expect(model).toEqual({ name: 'Ann' })
   })
 })
 
 describe('validateSubmission options', () => {
-  it('adds functions to age() instead of replacing it', () => {
+  it('adds functions to age() instead of replacing it', async () => {
     const withFunctions: FormDefinition = {
       components: [],
       validations: {
         note: [{ type: 'required', condition: 'isLong(code) && age(born) >= 18' }],
       },
     }
-    const result = validateSubmission(
+    const result = await validateSubmission(
       withFunctions,
       { code: 'abcdef', born: '1990-01-01' },
       { functions: { isLong: (value) => String(value).length > 5 } },
@@ -130,7 +132,7 @@ describe('validateSubmission options', () => {
     expect(result.errors.map((error) => error.path)).toEqual(['note'])
   })
 
-  it('declares the row fields of a repeat type the form names', () => {
+  it('declares the row fields of a repeat type the form names', async () => {
     // `callMe` exists only inside the rows of a custom repeat type: without
     // repeatTypes it would be an unknown name, keeping the rule active.
     const custom: FormDefinition = {
@@ -147,7 +149,9 @@ describe('validateSubmission options', () => {
       validations: { 'people.*.phone': [{ type: 'required', condition: 'callMe === true' }] },
     }
     const model = { people: [{}] }
-    expect(validateSubmission(custom, model).valid).toBe(false)
-    expect(validateSubmission(custom, model, { repeatTypes: ['travellers'] }).valid).toBe(true)
+    expect((await validateSubmission(custom, model)).valid).toBe(false)
+    expect((await validateSubmission(custom, model, { repeatTypes: ['travellers'] })).valid).toBe(
+      true,
+    )
   })
 })

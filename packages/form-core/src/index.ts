@@ -1,6 +1,7 @@
 // The form rules: validation, conditions, expressions, paths and lists.
 // No Vue and no DOM (core.spec.ts checks it), so it runs in Node and in the
 // browser alike.
+export { delegateToServer } from './delegate'
 export { defaultExpressionFunctions, ExpressionService } from './ExpressionService'
 export type { ExpressionContext } from './ExpressionService'
 export { ExpressionError, findExpressionLanguage } from './expressions'
@@ -14,6 +15,7 @@ export {
   defaultTranslationProvider,
   interpolate,
   INVALID_KEY,
+  UNAVAILABLE_KEY,
 } from './messages'
 export {
   declareFieldKeys,
@@ -30,7 +32,7 @@ export {
 export type { PathContext } from './pathAccessors'
 export { createLocalSubmissionValidator, validateSubmission } from './validateSubmission'
 export type { ValidateSubmissionOptions } from './validateSubmission'
-export { ValidationService } from './ValidationService'
+export { settle, ValidationService } from './ValidationService'
 export {
   createValidatorContext,
   builtInValidators,

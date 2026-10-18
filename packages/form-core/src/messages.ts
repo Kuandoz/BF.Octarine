@@ -3,11 +3,17 @@ import type { ListProvider, TranslationProvider } from '@octarine/form-abstracti
 // The key of a failed rule whose validator named none.
 export const INVALID_KEY = 'formRenderer.validation.invalid'
 
+// The key of a rule whose check failed to run (a validator that threw, or a
+// server that didn't answer). The value counts as invalid: better to ask
+// again than to let it through unchecked.
+export const UNAVAILABLE_KEY = 'formRenderer.validation.unavailable'
+
 // Fallback English text for the built-in validators' keys, used when the app
 // provides no TranslationProvider of its own (e.g. one bridging to
 // vue-i18n).
 const DEFAULT_MESSAGES: Record<string, string> = {
   [INVALID_KEY]: "This value isn't valid.",
+  [UNAVAILABLE_KEY]: "This couldn't be checked right now. Try again later.",
   'formRenderer.validation.required': 'This field is required.',
   'formRenderer.validation.minLength': 'Must be at least {min} characters.',
   'formRenderer.validation.maxLength': 'Must be at most {max} characters.',

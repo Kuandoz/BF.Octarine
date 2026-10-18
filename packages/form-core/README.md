@@ -13,7 +13,7 @@ implementation means the two sides can't drift apart.
 ```ts
 import { validateSubmission } from '@octarine/form-core'
 
-const result = validateSubmission(definition, submittedModel, { env: { language: 'nl' } })
+const result = await validateSubmission(definition, submittedModel, { env: { language: 'nl' } })
 
 result.valid // false
 result.errors
@@ -25,6 +25,8 @@ result.errors
 - Errors are **message keys with parameters**, not text. The server can translate them, or send
   them back for the client to translate. A rule's own `message` (a localisation key of the form, or
   literal text) comes along as `message`.
+- Async validators (a promise) are waited for. One that rejects or throws fails closed, with
+  `formRenderer.validation.unavailable`.
 - A field the model leaves out reads as `undefined` in expressions, as it does in the browser, so a
   required-if doesn't turn on because a key is missing. The model you pass in isn't changed.
 
@@ -40,6 +42,12 @@ Options:
 
 Register custom validators and functions in a module that the app and the server both import: a
 validator that exists only on the client lets anything through on the server.
+
+### Rules only the server can check
+
+`delegateToServer(submissionValidator)` is a validator for the client that leaves its rule to the
+server: register it under the rule's type on the client, and the real validator under the same
+type on the server. See the form-engine README.
 
 ### Behind an interface
 

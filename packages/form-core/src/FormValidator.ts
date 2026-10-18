@@ -64,7 +64,7 @@ export class FormValidator {
       ),
       { ...defaultExpressionFunctions, ...options.functions },
     )
-    this.validation = new ValidationService(options.validators, this.expressions)
+    this.validation = new ValidationService(options.validators, this.expressions, definition)
   }
 
   // For hide/disabled/readonly — defaults toward *not* hiding/disabling a
@@ -92,7 +92,8 @@ export class FormValidator {
   }
 
   // Every path a rule applies to in this model, with its result, in the
-  // order of `definition.validations`, rows in row order.
+  // order of `definition.validations`, rows in row order. A result can be
+  // pending when a validator is async; see settle().
   validateAll(model: Model, env: Env = {}): Map<string, ValidationResult> {
     const results = new Map<string, ValidationResult>()
     for (const wildcardKey of Object.keys(this.definition.validations ?? {})) {
