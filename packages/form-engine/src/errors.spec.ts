@@ -16,7 +16,8 @@ describe('when errors are shown', () => {
     validations: {
       email: [{ type: 'required' }, { type: 'email' }],
       name: [{ type: 'required' }],
-      phone: [{ type: 'required' }],
+      // Asked for only while shown: the form pairs hide with a condition.
+      phone: [{ type: 'required', condition: 'wantsCall === true' }],
     },
   }
 
@@ -59,15 +60,19 @@ describe('when errors are shown', () => {
     expect(engine.getError('name')).toBe('This field is required.')
   })
 
-  it('submits when everything visible is valid', () => {
+  it('submits when every required value is there', () => {
     const engine = new FormEngine(definition, { email: 'ada@example.com', name: 'Ada' })
     expect(engine.submit()).toBe(true)
   })
 
-  it('never shows the error of a hidden field', () => {
+  it('has no error for a field the form only asks for while it is shown', () => {
     const engine = new FormEngine(definition)
     engine.submit()
     expect(engine.getError('phone')).toBeUndefined()
+
+    engine.setValue('wantsCall', true)
+    expect(engine.submit()).toBe(false)
+    expect(engine.getError('phone')).toBe('This field is required.')
   })
 
   it('has text for an error whose validator gave none', () => {

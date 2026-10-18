@@ -186,13 +186,25 @@ validates every visible field, shows all errors and returns whether the form can
 be sent. A shown error follows the value and disappears once it is fixed.
 `getValidationResult(path)` still returns the raw result at any time.
 
-**Hidden fields are not validated.** The user can't see or fix them, so a
-required field behind `hide: "wantsCall !== true"` doesn't block the form.
+**Hidden fields are validated too.** A value can't slip through by hiding its
+field, whether it was tampered with or set behind the scenes. `hide` and
+`required` are independent, so a form that asks for a value only while its
+field is shown says so with a rule condition:
+
+```ts
+components: [
+  { type: "checkbox", path: "wantsCall" },
+  { type: "text", path: "phone", hide: "wantsCall !== true" },
+],
+validations: {
+  phone: [{ type: "required", condition: "wantsCall === true" }, { type: "phone" }],
+},
+```
+
 `engine.isHidden(path)` tells whether every field that shows a path is hidden,
-by its own `hide`, a container's, or (in a repeat) its row's. An error that was
-already shown disappears as soon as its field is hidden. Paths no field renders
-are always validated, and `address.street` follows the `address` field it
-belongs to.
+by its own `hide`, a container's, or (in a repeat) its row's, for an error
+summary that can't link to a hidden field. Paths no field renders are never
+hidden, and `address.street` follows the `address` field it belongs to.
 
 A path needs no corresponding rendered field at all — a cross-field rule like
 `endDate` works fine with no UI field behind it. Inside a `repeat`, a

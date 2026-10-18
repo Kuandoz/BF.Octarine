@@ -33,7 +33,8 @@ import/bridge code and without the builder. There are no concrete field componen
 
 Done so far:
 
-- Engine moved in; conditionally hidden fields are not validated (see the open decision below); the
+- Engine moved in; hidden fields are validated like any other (form designers pair `hide` with a
+  required-if); the
   required marker follows required-if conditions; errors appear after leaving a field or a submit
   attempt (`touch`, `submit`, `getError`); `getErrors()` lists them in screen order; `OErrorSummary`
   in `@octarine/vue`; half/third widths in a container-query grid
@@ -100,23 +101,16 @@ Abstractions that keep the "where does it run" choice open:
   so typos are reported.
 - Values of hidden fields are **kept** in the model, not dropped: hidden fields can carry values
   for machines (codes, ids) behind the scenes.
+- Hidden fields are **validated** like any other, so a tampered value can't slip through by hiding
+  its field. `hide` and `required` stay independent: a form that asks for a value only while
+  its field is shown pairs `hide` with a required-if (`condition`). That's the form designer's
+  call, not the engine's.
 
 ## Open decisions
 
-- **Validating hidden fields.** Leaning: validate them, so a tampered value can't slip through by
-  hiding its field. Paths that no field renders (values set behind the scenes) are already always
-  validated; this is about fields hidden by a `hide` condition. What needs settling:
-  - A `required` rule can't apply while its field is hidden (a phone number that's only asked for
-    when "call me" is ticked). Proposal: _hidden makes a field optional, not unchecked_: `required`
-    is off while hidden, every other rule still checks whatever value is there. Other validators
-    already pass on an empty value, so this is one rule.
-  - A user can leave an invalid value behind and then hide its field (types "abc" as an email,
-    then unticks "email me"). The form then fails on something the user can't see. Options: show it
-    in the error summary without a link, saying which answer hid it; or let a form author mark a
-    field `clearWhenHidden`; or both.
-  - This replaces the current behaviour (conditionally hidden → not validated at all).
-- **Disabled and read-only fields**: validated or not, and can the server trust their values?
-  (See server-side rules below.)
+- **Disabled and read-only fields** are validated (as today, for the same reason as hidden ones).
+  Open: can the server trust their values, since the client can send anything for them? (See
+  server-side rules below.)
 - **Custom components** (step 9): developer components, author-built reusable parts, or both.
 
 ## Next steps, in order
@@ -141,7 +135,8 @@ Abstractions that keep the "where does it run" choice open:
       (model) or `invalid` (errors); reacts to changes in `definition`, `model` and `locale`.
 - [ ] **One hide rule**: `FormComponent` uses the same visibility logic as validation
       (`isHidden`) instead of its own `resolveCondition(field.hide)`.
-- [ ] Apply the hidden-field decision above.
+- [ ] **Errors of hidden fields** in the error summary: no link (the field isn't mounted), so the
+      entry needs the field's label to say what it's about.
 
 ### 2. Split `form-abstractions` and `form-core` out of `form-engine`
 
@@ -187,6 +182,9 @@ Abstractions that keep the "where does it run" choice open:
       `form-abstractions` as data.
 - [ ] Check definitions against it during development, and in the service.
 - [ ] Use `dependencies` from compiled expressions to check that conditions name existing fields.
+- [ ] Warn the form designer about a field that can be hidden but has an unconditional `required`
+      (or another rule that can fail on a value the user can't see), in the editor, the builder and
+      the definition check.
 
 ### 6. `@octarine/forms` and more controls
 

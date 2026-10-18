@@ -113,6 +113,9 @@ describe('a form written in another language', () => {
 
     engine.setValue('wantsCall', false)
     expect(engine.isHidden('phone')).toBe(true)
+
+    engine.setValue('mode', 'mail')
+    expect(engine.isRequired('phone')).toBe(false)
     expect(engine.submit()).toBe(true)
   })
 

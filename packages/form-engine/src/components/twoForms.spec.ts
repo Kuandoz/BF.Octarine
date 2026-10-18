@@ -183,7 +183,7 @@ describe('two forms on one page', () => {
         { type: 'text', path: 'contact.note', label: 'Note' },
       ],
       validations: {
-        'contact.phone': [{ type: 'required' }],
+        'contact.phone': [{ type: 'required', condition: "contact.mode === 'phone'" }],
         'contact.note': [{ type: 'required', condition: "contact.mode === 'mail'" }],
       },
     })
@@ -201,7 +201,7 @@ describe('two forms on one page', () => {
     expect(b.el.find('[data-path="contact.note"] .required').exists()).toBe(true)
 
     expect(a.engine.submit()).toBe(false) // phone is shown and empty
-    expect(b.engine.submit()).toBe(false) // note is required, phone is hidden
+    expect(b.engine.submit()).toBe(false) // note is required, phone is not asked for
     expect(a.engine.getErrors().map((e) => e.path)).toEqual(['contact.phone'])
     expect(b.engine.getErrors().map((e) => e.path)).toEqual(['contact.note'])
     wrapper.unmount()

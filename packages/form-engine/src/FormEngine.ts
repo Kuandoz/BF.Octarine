@@ -245,22 +245,21 @@ export class FormEngine {
 
   // `definition.validations` is the only source of rules — resolution is
   // driven entirely by that dictionary plus the live model's actual shape.
-  // Validation is a model concern, except that a path whose fields are all
-  // hidden is skipped (see isHidden).
+  // Validation is a model concern: a hidden field is validated like any
+  // other, so a value can't slip through by hiding its field. A form that asks
+  // for a value only while it is shown pairs `hide` with a rule `condition`.
   validatePath(path: string): ValidationResult {
     const { wildcardPath, repeatContext } = this.resolvePathContext(path)
     const rules = this.definition.validations?.[wildcardPath]
     const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-    const result = this.isHidden(path)
-      ? { valid: true }
-      : this._validationService.validate(
-          rules,
-          this.getValue(path),
-          path,
-          scope,
-          this._model,
-          this.env,
-        )
+    const result = this._validationService.validate(
+      rules,
+      this.getValue(path),
+      path,
+      scope,
+      this._model,
+      this.env,
+    )
     this._validationResults[path] = result
     return result
   }
@@ -271,16 +270,14 @@ export class FormEngine {
     for (const [wildcardKey, rules] of Object.entries(this.definition.validations ?? {})) {
       for (const { path, repeatContext } of this.expandWildcardPaths(wildcardKey)) {
         const scope = repeatContext ? this.getRowScope(repeatContext) : this._model
-        const result = this.isHidden(path)
-          ? { valid: true }
-          : this._validationService.validate(
-              rules,
-              this.getValue(path),
-              path,
-              scope,
-              this._model,
-              this.env,
-            )
+        const result = this._validationService.validate(
+          rules,
+          this.getValue(path),
+          path,
+          scope,
+          this._model,
+          this.env,
+        )
         this._validationResults[path] = result
         validated.add(path)
         if (!result.valid) valid = false
@@ -293,17 +290,15 @@ export class FormEngine {
     return valid
   }
 
-  // A field that became hidden after it was validated no longer shows its
-  // error: the user can't see or fix it.
   getValidationResult(path: string): ValidationResult | undefined {
-    const result = this._validationResults[path]
-    return result && !result.valid && this.isHidden(path) ? { valid: true } : result
+    return this._validationResults[path]
   }
 
   // Whether no field shows `path` right now: its own `hide`, a container's,
-  // or a repeat row's is true. A hidden path isn't validated, since the user
-  // can't fix it. A path no field renders (a cross-field rule) is never
-  // hidden; `address.street` follows the `address` field it belongs to.
+  // or a repeat row's is true. Hidden paths are still validated; this is for
+  // whoever needs to tell, like an error summary that can't link to the field.
+  // A path no field renders (a cross-field rule) is never hidden;
+  // `address.street` follows the `address` field it belongs to.
   isHidden(path: string): boolean {
     const { wildcardPath, repeatContexts } = this.resolvePathContext(path)
     const fields = findHideConditions(this._hideConditions, wildcardPath)
