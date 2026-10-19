@@ -12,7 +12,7 @@ const t = useMessages()
 <template>
   <!-- The labelled icon makes it "Error: …" for screen readers, and more than red. -->
   <p :id="id" class="flex items-start gap-1.5 text-body-sm text-danger">
-    <OIcon :icon="exclamationCircle" size="sm" :label="t.error" class="mt-0.5" />
+    <OIcon :icon="exclamationCircle" size="sm" :label="t('error.label')" class="mt-0.5" />
     <span>{{ message }}</span>
   </p>
 </template>

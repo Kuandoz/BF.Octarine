@@ -69,7 +69,7 @@ const { classes, attrs } = useClasses(
   >
     <OHeading :id="headingId" :level="headingLevel" :size="4" class="flex items-center gap-2">
       <OIcon :icon="exclamationCircle" intent="danger" size="md" />
-      {{ title ?? t.errorSummary }}
+      {{ title ?? t('errorSummary.title') }}
     </OHeading>
     <ul class="mt-3 flex list-disc flex-col gap-1.5 ps-12 text-body text-danger">
       <li v-for="(error, index) in errors" :key="error.target ?? index">

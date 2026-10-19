@@ -1,0 +1,52 @@
+{
+  "field.optional": "(optioneel)",
+  "field.required": "(verplicht)",
+  "form.requiredNote": "Velden met * zijn verplicht.",
+  "error.label": "Fout:",
+  "errorSummary.title": "Er is een probleem",
+  "input.clear": "Wissen",
+  "status.loading": "Bezig met laden",
+  "counter.maxLength": {
+    "one": "Je kunt maximaal {max} teken invullen.",
+    "other": "Je kunt maximaal {max} tekens invullen."
+  },
+  "counter.charactersLeft": {
+    "one": "Nog {count} teken",
+    "other": "Nog {count} tekens"
+  },
+  "counter.charactersOver": {
+    "one": "{count} teken te veel",
+    "other": "{count} tekens te veel"
+  },
+
+  "validation.invalid": "Deze waarde is niet geldig. Gelieve ze na te kijken.",
+  "validation.unavailable": "Dit kon nu niet worden gecontroleerd. Gelieve het later opnieuw te proberen.",
+  "validation.required": "Gelieve dit veld in te vullen.",
+  "validation.minLength": {
+    "one": "Gelieve minstens {min} teken in te vullen.",
+    "other": "Gelieve minstens {min} tekens in te vullen."
+  },
+  "validation.maxLength": {
+    "one": "Gelieve maximaal {max} teken in te vullen.",
+    "other": "Gelieve maximaal {max} tekens in te vullen."
+  },
+  "validation.pattern": "Gelieve dit in de verwachte vorm in te vullen.",
+  "validation.email": "Gelieve een geldig e-mailadres in te vullen, zoals naam@example.com.",
+  "validation.phone": "Gelieve een geldig telefoonnummer in te vullen.",
+  "validation.numeric": "Gelieve enkel cijfers in te vullen.",
+  "validation.decimal": "Gelieve een getal in te vullen.",
+  "validation.bool": "Gelieve ja of nee te kiezen.",
+  "validation.insz": "Gelieve een geldig rijksregisternummer in te vullen (11 cijfers).",
+  "validation.iban": "Gelieve een geldig IBAN-nummer in te vullen, zoals BE68 5390 0754 7034.",
+  "validation.oneOf": "Gelieve een van de opties te kiezen.",
+  "validation.flags": "Gelieve enkel uit de opties te kiezen.",
+  "validation.compare": "Deze waarde past niet bij de rest van het formulier. Gelieve ze na te kijken.",
+  "validation.date": "Gelieve een geldige datum in te vullen.",
+  "validation.dateMin": "Gelieve een datum vanaf {min:date} in te vullen.",
+  "validation.dateMax": "Gelieve een datum tot en met {max:date} in te vullen.",
+  "validation.dateRange": "Gelieve een datum tussen {min:date} en {max:date} in te vullen.",
+  "validation.datetime": "Gelieve een geldige datum en tijd in te vullen.",
+  "validation.datetimeMin": "Gelieve een datum en tijd vanaf {min:datetime} in te vullen.",
+  "validation.datetimeMax": "Gelieve een datum en tijd tot en met {max:datetime} in te vullen.",
+  "validation.datetimeRange": "Gelieve een datum en tijd tussen {min:datetime} en {max:datetime} in te vullen."
+}

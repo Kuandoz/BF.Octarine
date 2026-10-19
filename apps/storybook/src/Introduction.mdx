@@ -21,6 +21,7 @@ the parts that don't need a framework don't depend on one:
 | `@octarine/tokens`            | Colors, typography, spacing, radius, shadows and component density, and the themes that fill them. |
 | `@octarine/tailwind`          | Turns the tokens into a Tailwind theme, with text styles and shared utilities.                     |
 | `@octarine/icons`             | Heroicons and Octarine's own icons as data, and a Vite plugin that bundles only what you use.      |
+| `@octarine/i18n`              | Every text Octarine writes, one JSON file per language: English, Dutch, French and German.         |
 | `@octarine/vue`               | The components.                                                                                    |
 | `@octarine/form-abstractions` | The types of the JSON forms, with no runtime code.                                                 |
 | `@octarine/form-core`         | The form rules, without Vue, so the server checks submissions with the same code.                  |
@@ -56,11 +57,13 @@ export default defineConfig({ plugins: [vue(), tailwindcss(), octarineIcons()] }
 
 ```ts
 // main.ts
-import { createIcons } from '@octarine/vue'
+import nl from '@octarine/i18n/locales/nl.json'
+import { createIcons, createMessages } from '@octarine/vue'
 import icons from 'virtual:octarine-icons'
 import './style.css'
 
-createApp(App).use(createIcons(icons)).mount('#app')
+// English is built in; import the other languages the app uses.
+createApp(App).use(createIcons(icons)).use(createMessages({ nl })).mount('#app')
 ```
 
 ```vue
@@ -96,5 +99,6 @@ Five themes fill exactly the same tokens, so they can be swapped without touchin
   `danger-subtle`), never which color it is. That is what lets themes and dark mode work.
 - **Text styles, not hand-mixed typography.** `text-heading-2`, `text-body` and `text-caption` set
   size, line height, weight, family and case together, per theme.
-- **Words in every language.** The text components add themselves ("(optional)", "Clear") comes in
-  English, Dutch, French and German, and follows the page's language.
+- **Words in every language.** The text Octarine adds itself ("(optional)", "Clear", the form
+  errors) comes in English, Dutch, French and German, and follows the page's language. Each language
+  is one file in `@octarine/i18n`, so adding one means translating one file.

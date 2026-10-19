@@ -1,0 +1,52 @@
+{
+  "field.optional": "(optional)",
+  "field.required": "(required)",
+  "form.requiredNote": "Fields marked * are required.",
+  "error.label": "Error:",
+  "errorSummary.title": "There is a problem",
+  "input.clear": "Clear",
+  "status.loading": "Loading",
+  "counter.maxLength": {
+    "one": "You can enter up to {max} character.",
+    "other": "You can enter up to {max} characters."
+  },
+  "counter.charactersLeft": {
+    "one": "{count} character left",
+    "other": "{count} characters left"
+  },
+  "counter.charactersOver": {
+    "one": "{count} character too many",
+    "other": "{count} characters too many"
+  },
+
+  "validation.invalid": "This value isn't valid. Please check it.",
+  "validation.unavailable": "This couldn't be checked right now. Please try again later.",
+  "validation.required": "Please fill in this field.",
+  "validation.minLength": {
+    "one": "Please enter at least {min} character.",
+    "other": "Please enter at least {min} characters."
+  },
+  "validation.maxLength": {
+    "one": "Please enter no more than {max} character.",
+    "other": "Please enter no more than {max} characters."
+  },
+  "validation.pattern": "Please enter this in the expected format.",
+  "validation.email": "Please enter a valid email address, like name@example.com.",
+  "validation.phone": "Please enter a valid phone number.",
+  "validation.numeric": "Please enter digits only.",
+  "validation.decimal": "Please enter a number.",
+  "validation.bool": "Please choose yes or no.",
+  "validation.insz": "Please enter a valid national register number (11 digits).",
+  "validation.iban": "Please enter a valid IBAN, like BE68 5390 0754 7034.",
+  "validation.oneOf": "Please choose one of the options.",
+  "validation.flags": "Please choose only from the options.",
+  "validation.compare": "This value doesn't fit with the rest of the form. Please check it.",
+  "validation.date": "Please enter a valid date.",
+  "validation.dateMin": "Please enter a date on or after {min:date}.",
+  "validation.dateMax": "Please enter a date on or before {max:date}.",
+  "validation.dateRange": "Please enter a date between {min:date} and {max:date}.",
+  "validation.datetime": "Please enter a valid date and time.",
+  "validation.datetimeMin": "Please enter a date and time on or after {min:datetime}.",
+  "validation.datetimeMax": "Please enter a date and time on or before {max:datetime}.",
+  "validation.datetimeRange": "Please enter a date and time between {min:datetime} and {max:datetime}."
+}

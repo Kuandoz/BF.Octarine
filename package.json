@@ -8,7 +8,7 @@
     "storybook": "pnpm build:foundation && pnpm --filter @octarine/storybook dev",
     "build-storybook": "pnpm build:foundation && pnpm --filter @octarine/storybook build",
     "playground": "pnpm build && pnpm --filter @octarine/playground dev",
-    "build:foundation": "pnpm --filter @octarine/tokens --filter @octarine/tailwind --filter @octarine/icons --filter @octarine/form-abstractions --filter @octarine/form-core build",
+    "build:foundation": "pnpm --filter @octarine/tokens --filter @octarine/tailwind --filter @octarine/icons --filter @octarine/i18n --filter @octarine/form-abstractions --filter @octarine/form-core build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write ."

@@ -2,7 +2,10 @@ import { setup, type Decorator, type Preview } from '@storybook/vue3-vite'
 import { defaultTheme, themes } from '@octarine/tokens'
 import { GLOBALS_UPDATED, SET_GLOBALS, UPDATE_GLOBALS } from 'storybook/internal/core-events'
 import { addons } from 'storybook/preview-api'
-import { createIcons } from '../../../packages/vue/src'
+import de from '@octarine/i18n/locales/de.json'
+import fr from '@octarine/i18n/locales/fr.json'
+import nl from '@octarine/i18n/locales/nl.json'
+import { createIcons, createMessages } from '../../../packages/vue/src'
 import icons from 'virtual:octarine-icons'
 import { ThemedDocsContainer } from './docsContainer'
 import './styles.css'
@@ -54,9 +57,11 @@ systemDark.addEventListener('change', () =>
   channel.emit(UPDATE_GLOBALS, { globals: { mode: systemMode() } }),
 )
 
-// Icons the stories use, found by the octarine-icons Vite plugin.
+// Icons the stories use, found by the octarine-icons Vite plugin, and the
+// languages of the toolbar.
 setup((app) => {
   app.use(createIcons(icons))
+  app.use(createMessages({ nl, fr, de }))
 })
 
 const preview: Preview = {

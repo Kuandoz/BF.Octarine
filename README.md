@@ -5,13 +5,15 @@ A design system built with Vue 3 and Tailwind CSS v4, split into layered package
 ```
 @octarine/tokens  ──►  @octarine/tailwind  ──┐
                                             ├──►  @octarine/vue  ──►  apps (storybook, playground)
-@octarine/icons  ───────────────────────────┘
+@octarine/icons  ───────────────────────────┤
+@octarine/i18n  ────────────────────────────┘
 
 @octarine/form-abstractions  ──►  @octarine/form-core  ──►  @octarine/form-engine
 (types only)                       (rules, no Vue)            (Vue, no styling)
 ```
 
-Each layer depends only on the layers to its left. `@octarine/icons` depends on nothing. The form
+Each layer depends only on the layers to its left. `@octarine/icons` and `@octarine/i18n` depend on
+nothing; `form-core` uses `i18n` too, so the server writes errors in the same words. The form
 packages need no styling: `form-core` runs in Node too (for checking submissions on the server), and
 only `form-engine` uses Vue.
 
@@ -20,6 +22,7 @@ only `form-engine` uses Vue.
 | [`@octarine/tokens`](packages/tokens)                       | The source of truth, with no framework code. Global **primitives** (type scale, spacing), **semantic** token names (`surface`, `fg-muted`, `primary`, text styles) and the **themes** that fill them. Builds to `tokens.css` (default theme), `themes/*.css` and `tokens.json`. |
 | [`@octarine/tailwind`](packages/tailwind)                   | Maps the tokens onto Tailwind's `@theme`, plus base styles and shared utilities. Consumers import this instead of `tailwindcss`.                                                                                                                                                |
 | [`@octarine/icons`](packages/icons)                         | Icons as plain data: the [Heroicons](https://heroicons.com) set (MIT) in four variants, Octarine's own icons (`octarine:*`) and a **Vite plugin** that bundles only the icons the source uses. No framework code.                                                               |
+| [`@octarine/i18n`](packages/i18n)                           | Every text Octarine writes (the components' words and the form errors), one JSON file per language: English, Dutch, French and German. English is built in; apps import the others. Also the formatter for parameters, dates and plurals.                                       |
 | [`@octarine/form-abstractions`](packages/form-abstractions) | The types and interfaces of the JSON forms (definitions, rules, errors, `SubmissionValidator`, `ExpressionLanguage`), with no runtime code.                                                                                                                                     |
 | [`@octarine/form-core`](packages/form-core)                 | The form rules: validation, conditions, expressions, paths and lists, with no Vue. `validateSubmission` checks a submitted model on the server with the same code the browser runs.                                                                                             |
 | [`@octarine/form-engine`](packages/form-engine)             | Renders forms from a JSON definition on top of form-core: reactive model, touched and submitted state, error messages, localisation and lists. Headless: field components register themselves by `type`.                                                                        |
@@ -155,9 +158,10 @@ To add a theme, write a `Theme` in `packages/tokens/src/themes/` and register it
   counter. Storybook's **Forms/Anatomy** page shows every part and its accessibility rules.
 - **Markers:** `OForm`'s `markers` is `required` (default: `*`, plus a note explaining it),
   `optional` or `both`. A field or group can override it.
-- **Languages:** the words Octarine adds follow the `OForm`'s `lang`, else `<html lang>`. English,
-  Dutch, French and German are built in; add or change others with
-  `app.use(createMessages({ es: { optional: '(opcional)', … } }))`.
+- **Languages:** the words Octarine adds follow the `OForm`'s `lang`, else `<html lang>`. English
+  is built in; Dutch, French and German come from `@octarine/i18n`, and other languages or changed
+  words go in the same way:
+  `app.use(createMessages({ nl, es: { 'field.optional': '(opcional)', … } }))`.
 - **Your own controls** draw their box with `OControlFrame` and get id, state and
   `aria-describedby` from `useFormField()`.
 

@@ -22,11 +22,12 @@ export default defineConfig({ plugins: [vue(), tailwindcss(), octarineIcons()] }
 
 ```ts
 // main.ts
-import { createIcons } from '@octarine/vue'
+import nl from '@octarine/i18n/locales/nl.json'
+import { createIcons, createMessages } from '@octarine/vue'
 import icons from 'virtual:octarine-icons'
 import './style.css'
 
-createApp(App).use(createIcons(icons)).mount('#app')
+createApp(App).use(createIcons(icons)).use(createMessages({ nl })).mount('#app')
 ```
 
 Then import what you use:
@@ -66,7 +67,7 @@ Every component has a page in Storybook with its props, variants and states.
 | `useTheme()`       | Reads and sets the theme (`<html data-theme>`) and loads the theme's web fonts.                     |
 | `useColorMode()`   | Light, dark or system (`<html data-mode>`), with `toggle()`.                                        |
 | `useMessages()`    | The words Octarine adds itself ("(optional)", "Clear", "Error:"), in the current language.          |
-| `createMessages()` | A plugin that adds or changes those words: `app.use(createMessages({ es: { … } }))`.                |
+| `createMessages()` | A plugin with the languages besides English: `app.use(createMessages({ nl, fr }))` (see below).     |
 | `createIcons()`    | A plugin that registers the icons from `virtual:octarine-icons`.                                    |
 | `useFormField()`   | For your own controls: the id, state and `aria-describedby` that the surrounding `OField` provides. |
 | `useClasses()`     | Merges a consumer's `class` over a component's own classes (`tailwind-merge`).                      |
@@ -79,8 +80,19 @@ error, counter), and groups of controls in `OFieldset` (legend). `OErrorSummary`
 the top after a failed submit and links to each field. Storybook's **Forms/Anatomy** page shows every
 part and its accessibility rules.
 
-The words Octarine adds follow the `OForm`'s `lang`, else `<html lang>`. English, Dutch, French and
-German are built in.
+The words Octarine adds follow the `OForm`'s `lang`, else `<html lang>`. English is built in; the
+other languages come from [`@octarine/i18n`](../i18n), one file each, so an app bundles only the ones
+it imports. The same plugin changes words or adds a language Octarine doesn't ship:
+
+```ts
+import fr from '@octarine/i18n/locales/fr.json'
+import nl from '@octarine/i18n/locales/nl.json'
+
+app.use(createMessages({ nl, fr, 'nl-BE': { 'input.clear': 'Leegmaken' } }))
+```
+
+A regional tag (`nl-BE`) uses its own entries, then the language's, then English. A language with
+no file falls back to English, with a console warning that names the file to import.
 
 To build a control of your own, draw its box with `OControlFrame`, mark the native element
 `data-control`, and get id, state and `aria-describedby` from `useFormField()`.

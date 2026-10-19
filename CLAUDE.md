@@ -10,6 +10,7 @@ full overview. Ongoing work on the JSON forms (status, decisions, next steps) is
 packages/tokens    → design tokens + themes (TS source of truth → tokens.css, themes/*.css, tokens.json)
 packages/tailwind  → Tailwind @theme generated from tokens + base styles/utilities
 packages/icons     → icon data (Heroicons + octarine:*), SVG converter, Vite plugin (octarineIcons)
+packages/i18n      → every text Octarine writes, locales/<language>.json, and the formatter
 packages/form-abstractions → types and interfaces of the JSON forms only (no runtime code)
 packages/form-core → form rules: validation, conditions, expressions, paths, lists (no Vue, no DOM)
 packages/form-engine → headless Vue engine on form-core: reactive state, errors, renderer, composables
@@ -19,11 +20,11 @@ apps/playground    → demo app consuming the *built* packages
 assets/brand       → Octarine logos (SVG)
 ```
 
-Each layer may only depend on the layers above it in this list; `icons` depends on nothing, and
-the form packages go `form-abstractions` → `form-core` → `form-engine`: abstractions has no runtime
-code, core runs in Node and the browser (no Vue, no DOM; specs check both), and only the engine uses
-Vue. None of them has styling.
-`tokens` and `icons` contain no Tailwind or Vue code. Components use no raw color values.
+Each layer may only depend on the layers above it in this list; `icons` and `i18n` depend on
+nothing, and the form packages go `form-abstractions` → `form-core` → `form-engine`: abstractions
+has no runtime code, core runs in Node and the browser (no Vue, no DOM; specs check both), and only
+the engine uses Vue. None of them has styling.
+`tokens`, `icons` and `i18n` contain no Tailwind or Vue code. Components use no raw color values.
 
 ## Commands
 
@@ -73,9 +74,11 @@ Before considering work done, `pnpm build`, `pnpm test` and `pnpm typecheck` mus
   error, counter), and groups of controls in `OFieldset` (legend). New controls draw their box with
   `OControlFrame` and mark the native element `data-control`; they pick up id, state and
   `aria-describedby` through `useFormField()`. The anatomy is documented in Storybook (Forms/Anatomy).
-- **Text components add themselves** ("(optional)", "Clear", "Error:") comes from `useMessages()`,
-  never from hard-coded English. A new key goes into every catalog in `packages/vue/src/i18n/`
-  (en, nl, fr, de). Labels, hints and errors are passed in by the app.
+- **Text components add themselves** ("(optional)", "Clear", "Error:") comes from `useMessages()`
+  (`t('field.optional')`), never from hard-coded English. A new key goes into every file in
+  `packages/i18n/locales/` (en, nl, fr, de) and into `en.descriptions.json`; the i18n spec checks
+  it. Dutch is Flemish with "je"; errors ask politely ("Please…", "Gelieve…", "Veuillez…",
+  "Bitte…"). Labels, hints and errors are passed in by the app.
 - **Variants:** define them with `cva` and write every class name out in full, because Tailwind
   scans the source. Never build class names with string interpolation.
 - **Class merging:** root elements use `useClasses()` with `defineOptions({ inheritAttrs: false })`

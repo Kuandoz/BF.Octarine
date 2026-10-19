@@ -17,7 +17,9 @@ const t = useMessages()
        Spaces are in the expressions: the template compiler trims them from text. -->
   <template v-if="star">
     <span class="text-danger" aria-hidden="true">{{ ' *' }}</span>
-    <span v-if="announce" class="sr-only">{{ ` ${t.required}` }}</span>
+    <span v-if="announce" class="sr-only">{{ ` ${t('field.required')}` }}</span>
   </template>
-  <span v-else-if="optional" class="font-normal text-fg-muted">{{ ` ${t.optional}` }}</span>
+  <span v-else-if="optional" class="font-normal text-fg-muted">{{
+    ` ${t('field.optional')}`
+  }}</span>
 </template>

@@ -88,7 +88,7 @@ describe('OForm', () => {
     const wrapper = mount(OForm, {
       props: { lang: 'es', markers: 'optional' },
       slots: { default: () => [field('Sitio web')] },
-      global: { plugins: [createMessages({ es: { optional: '(opcional)' } })] },
+      global: { plugins: [createMessages({ es: { 'field.optional': '(opcional)' } })] },
     })
     expect(wrapper.get('label').text()).toBe('Sitio web (opcional)')
   })

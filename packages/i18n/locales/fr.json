@@ -1,0 +1,52 @@
+{
+  "field.optional": "(facultatif)",
+  "field.required": "(obligatoire)",
+  "form.requiredNote": "Les champs marqués d’un * sont obligatoires.",
+  "error.label": "Erreur :",
+  "errorSummary.title": "Il y a un problème",
+  "input.clear": "Effacer",
+  "status.loading": "Chargement",
+  "counter.maxLength": {
+    "one": "Vous pouvez saisir jusqu’à {max} caractère.",
+    "other": "Vous pouvez saisir jusqu’à {max} caractères."
+  },
+  "counter.charactersLeft": {
+    "one": "{count} caractère restant",
+    "other": "{count} caractères restants"
+  },
+  "counter.charactersOver": {
+    "one": "{count} caractère en trop",
+    "other": "{count} caractères en trop"
+  },
+
+  "validation.invalid": "Cette valeur n’est pas valide. Veuillez la vérifier.",
+  "validation.unavailable": "La vérification n’a pas pu être effectuée. Veuillez réessayer plus tard.",
+  "validation.required": "Veuillez remplir ce champ.",
+  "validation.minLength": {
+    "one": "Veuillez saisir au moins {min} caractère.",
+    "other": "Veuillez saisir au moins {min} caractères."
+  },
+  "validation.maxLength": {
+    "one": "Veuillez saisir au maximum {max} caractère.",
+    "other": "Veuillez saisir au maximum {max} caractères."
+  },
+  "validation.pattern": "Veuillez respecter le format attendu.",
+  "validation.email": "Veuillez saisir une adresse e-mail valide, par exemple nom@example.com.",
+  "validation.phone": "Veuillez saisir un numéro de téléphone valide.",
+  "validation.numeric": "Veuillez saisir uniquement des chiffres.",
+  "validation.decimal": "Veuillez saisir un nombre.",
+  "validation.bool": "Veuillez choisir oui ou non.",
+  "validation.insz": "Veuillez saisir un numéro de registre national valide (11 chiffres).",
+  "validation.iban": "Veuillez saisir un IBAN valide, par exemple BE68 5390 0754 7034.",
+  "validation.oneOf": "Veuillez choisir l’une des options.",
+  "validation.flags": "Veuillez choisir uniquement parmi les options.",
+  "validation.compare": "Cette valeur ne correspond pas au reste du formulaire. Veuillez la vérifier.",
+  "validation.date": "Veuillez saisir une date valide.",
+  "validation.dateMin": "Veuillez saisir une date à partir du {min:date}.",
+  "validation.dateMax": "Veuillez saisir une date jusqu’au {max:date}.",
+  "validation.dateRange": "Veuillez saisir une date entre le {min:date} et le {max:date}.",
+  "validation.datetime": "Veuillez saisir une date et une heure valides.",
+  "validation.datetimeMin": "Veuillez saisir une date et une heure à partir du {min:datetime}.",
+  "validation.datetimeMax": "Veuillez saisir une date et une heure jusqu’au {max:datetime}.",
+  "validation.datetimeRange": "Veuillez saisir une date et une heure entre le {min:datetime} et le {max:datetime}."
+}

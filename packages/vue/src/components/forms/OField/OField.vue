@@ -64,7 +64,7 @@ const length = ref(0)
 const remaining = computed(() => (props.maxLength ?? 0) - length.value)
 const counterText = computed(() =>
   remaining.value < 0
-    ? t.value.charactersOver(-remaining.value)
+    ? t.value('counter.charactersOver', { count: -remaining.value })
     : `${length.value} / ${props.maxLength}`,
 )
 const announcement = ref('')
@@ -77,8 +77,8 @@ watch([remaining, t], () => {
     announcement.value = !near
       ? ''
       : remaining.value < 0
-        ? t.value.charactersOver(-remaining.value)
-        : t.value.charactersLeft(remaining.value)
+        ? t.value('counter.charactersOver', { count: -remaining.value })
+        : t.value('counter.charactersLeft', { count: remaining.value })
   }, 750)
 })
 onScopeDispose(() => clearTimeout(timer))
@@ -120,7 +120,7 @@ const { classes, attrs } = useClasses(() => 'flex flex-col gap-(--oct-field-gap)
     >
       <FieldError v-if="error" :id="errorId" :message="error" />
       <template v-if="maxLength !== undefined">
-        <p :id="counterId" class="sr-only">{{ t.maxLength(maxLength) }}</p>
+        <p :id="counterId" class="sr-only">{{ t('counter.maxLength', { max: maxLength }) }}</p>
         <p
           aria-hidden="true"
           class="ms-auto text-body-sm tabular-nums"

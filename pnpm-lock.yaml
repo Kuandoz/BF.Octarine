@@ -212,6 +212,9 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@octarine/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@octarine/icons':
         specifier: workspace:*
         version: link:../../packages/icons
@@ -279,6 +282,9 @@ importers:
       '@octarine/form-abstractions':
         specifier: workspace:*
         version: link:../form-abstractions
+      '@octarine/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       subscript:
         specifier: ^10.8.1
         version: 10.8.1
@@ -305,6 +311,9 @@ importers:
         specifier: workspace:*
         version: link:../form-core
     devDependencies:
+      '@octarine/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@vitejs/plugin-vue':
         specifier: ^6.0.10
         version: 6.0.10(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(vue@3.5.43(typescript@6.0.3))
@@ -329,6 +338,21 @@ importers:
       vue-tsc:
         specifier: ^3.3.13
         version: 3.3.13(typescript@6.0.3)
+
+  packages/i18n:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.3.4
+        version: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+      vitest:
+        specifier: ^5.0.4
+        version: 5.0.4(@types/node@24.19.2)(jsdom@30.1.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   packages/icons:
     devDependencies:
@@ -387,6 +411,9 @@ importers:
 
   packages/vue:
     dependencies:
+      '@octarine/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@octarine/icons':
         specifier: workspace:*
         version: link:../icons

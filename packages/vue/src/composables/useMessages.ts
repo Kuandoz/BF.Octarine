@@ -1,10 +1,22 @@
+import {
+  builtInCatalogs,
+  catalogFor,
+  fallbackLanguage,
+  languageChain,
+  translate,
+  type Catalogs,
+  type MessageParams,
+} from '@octarine/i18n'
+import type en from '@octarine/i18n/locales/en.json'
 import { computed, inject, ref, type ComputedRef, type InjectionKey, type Plugin } from 'vue'
-import { builtInMessages, fallbackLanguage, type Messages } from '../i18n/messages'
 
-/** Extra languages, or changes to built-in ones, by language tag (`es`, `nl-BE`). */
-export type MessageOverrides = Readonly<Record<string, Partial<Messages>>>
+/** A key of the texts Octarine writes, e.g. `field.optional`. */
+export type MessageKey = keyof typeof en
 
-export const messagesKey: InjectionKey<MessageOverrides> = Symbol('octarine-messages')
+/** Octarine's text for a key, in the current language. */
+export type MessageFunction = (key: MessageKey, params?: MessageParams) => string
+
+export const messagesKey: InjectionKey<Catalogs> = Symbol('octarine-messages')
 
 /** Provided by `OForm` when it has a `lang`. */
 export const languageKey: InjectionKey<ComputedRef<string>> = Symbol('octarine-language')
@@ -25,39 +37,56 @@ function observeDocumentLanguage() {
 }
 
 /**
- * Adds languages or changes Octarine's own text. Missing keys fall back to the
- * built-in language, then to English:
+ * The languages Octarine writes in, besides English, from `@octarine/i18n`,
+ * or changes to its words. A catalog only needs the keys it changes; the rest
+ * come from the next language in line (`nl-BE` → `nl` → English):
  *
- *   app.use(createMessages({ es: { optional: '(opcional)', … }, nl: { clear: 'Leegmaken' } }))
+ *   import nl from '@octarine/i18n/locales/nl.json'
+ *   app.use(createMessages({ nl, 'nl-BE': { 'input.clear': 'Leegmaken' } }))
  */
-export function createMessages(overrides: MessageOverrides): Plugin {
+export function createMessages(catalogs: Catalogs): Plugin {
   return {
     install(app) {
-      app.provide(messagesKey, overrides)
+      app.provide(messagesKey, catalogs)
     },
   }
 }
 
 const warned = new Set<string>()
 
-function lookup<T>(record: Readonly<Record<string, T>>, tag: string): T | undefined {
-  const key = Object.keys(record).find((k) => k.toLowerCase() === tag)
-  return key === undefined ? undefined : record[key]
+/** Octarine's text for `key` in `language`, from `catalogs` and then English. */
+export function translateMessage(
+  key: MessageKey,
+  params: MessageParams | undefined,
+  language: string,
+  catalogs: Catalogs = {},
+): string {
+  warnMissingLanguage(language, catalogs)
+  return translate([catalogs, builtInCatalogs], key, params, language) ?? key
 }
 
-/** Messages for a language tag: `nl-BE` uses `nl-BE`, then `nl`, then English. */
-export function resolveMessages(language: string, overrides: MessageOverrides = {}): Messages {
-  const tag = language.toLowerCase()
-  const base = tag.split('-')[0]!
-  const builtIn = builtInMessages[base]
-  const custom = { ...lookup(overrides, base), ...lookup(overrides, tag) }
-  if (!builtIn && !Object.keys(custom).length && !warned.has(base)) {
-    warned.add(base)
-    console.warn(
-      `[Octarine] no messages for language "${language}"; using English. Add them with createMessages().`,
-    )
-  }
-  return { ...builtInMessages[fallbackLanguage]!, ...builtIn, ...custom }
+function warnMissingLanguage(language: string, catalogs: Catalogs) {
+  const base = language.toLowerCase().split('-')[0]!
+  if (!base || base === fallbackLanguage || warned.has(base)) return
+  const known = languageChain(language)
+    .filter((tag) => tag !== fallbackLanguage)
+    .some((tag) => catalogFor(catalogs, tag))
+  if (known) return
+  warned.add(base)
+  console.warn(
+    `[Octarine] no messages for language "${language}"; using English. Add them with createMessages(), e.g. from @octarine/i18n/locales/${base}.json.`,
+  )
+}
+
+/** A message function for a language, reading the app's catalogs. */
+export function messagesFor(
+  language: () => string,
+  catalogs: Catalogs,
+): ComputedRef<MessageFunction> {
+  return computed(() => {
+    const current = language()
+    return (key, params) => translateMessage(key, params, current, catalogs)
+  })
 }
 
 /** The language of the enclosing `OForm` (its `lang`), else `<html lang>`. */
@@ -67,9 +96,8 @@ export function useLanguage(): ComputedRef<string> {
   return computed(() => form?.value || documentLanguage.value || fallbackLanguage)
 }
 
-/** Octarine's own text in the current language. */
-export function useMessages(): ComputedRef<Messages> {
+/** Octarine's own text in the current language: `t.value('field.optional')`. */
+export function useMessages(): ComputedRef<MessageFunction> {
   const language = useLanguage()
-  const overrides = inject(messagesKey, {})
-  return computed(() => resolveMessages(language.value, overrides))
+  return messagesFor(() => language.value, inject(messagesKey, {}))
 }

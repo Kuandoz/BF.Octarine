@@ -133,13 +133,13 @@ function clear() {
       #trailing
     >
       <span v-if="suffix" :id="suffixId" class="shrink-0 text-fg-muted">{{ suffix }}</span>
-      <OSpinner v-if="loading" size="sm" :label="t.loading" class="text-fg-muted" />
+      <OSpinner v-if="loading" size="sm" :label="t('status.loading')" class="text-fg-muted" />
       <OIcon v-else-if="field.invalid.value" :icon="exclamationCircle" intent="danger" size="sm" />
       <OIcon v-else-if="readonly" :icon="lockClosed" size="sm" class="text-fg-muted" />
       <button
         v-if="canClear"
         type="button"
-        :aria-label="t.clear"
+        :aria-label="t('input.clear')"
         class="focus-ring transition-standard -me-1 flex size-6 shrink-0 items-center justify-center rounded-control text-fg-muted hover:bg-surface-sunken hover:text-fg"
         @click="clear"
       >

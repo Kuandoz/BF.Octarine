@@ -234,8 +234,9 @@ _Clear_ or _Show password_.
 - **Which language:** the `lang` of the enclosing `OForm`, so `<OForm lang="fr">` inside an English
   page gets French. Without one, `<html lang>`, which every app must set anyway (WCAG 3.1.1).
   Octarine follows changes to `<html lang>` while the app runs.
-- **Where the text comes from:** Octarine ships English, Dutch, French and German. Apps add
-  languages or change words with `app.use(createMessages({ es: { optional: '(opcional)', … } }))`.
-  A regional tag (`nl-BE`) uses its own entry, then the language's, then English; an unknown
-  language falls back to English with a console warning.
+- **Where the text comes from:** `@octarine/i18n` has a file per language: English (built in),
+  Dutch, French and German. Apps import the ones they use and add languages or change words the
+  same way: `app.use(createMessages({ nl, es: { 'field.optional': '(opcional)', … } }))`. A
+  regional tag (`nl-BE`) uses its own entries, then the language's, then English; a language
+  with no file falls back to English with a console warning.
 - Text the app passes in (label, hint, error) is the app's job to translate.
