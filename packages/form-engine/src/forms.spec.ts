@@ -134,6 +134,6 @@ describe('useForm', () => {
         },
       }),
     )
-    expect(errors).toMatchObject([{ path: 'x', message: 'This field is required.' }])
+    expect(errors).toMatchObject([{ path: 'x', message: 'Please fill in this field.' }])
   })
 })

@@ -272,7 +272,7 @@ describe('two forms on one page', () => {
 
     expect(await a.engine.submit()).toBe(false)
     expect(a.engine.getErrors()).toMatchObject([
-      { path: 'person.name', message: "This value isn't valid." },
+      { path: 'person.name', message: "This value isn't valid. Please check it." },
     ])
     // An unknown rule type is skipped, so the other form stays valid.
     expect(await b.engine.submit()).toBe(true)

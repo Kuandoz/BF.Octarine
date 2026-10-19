@@ -107,7 +107,7 @@ describe('reset', () => {
     const engine = new FormEngine(definition)
     engine.touch('name')
     engine.submit()
-    expect(engine.getError('name')).toBe('This field is required.')
+    expect(engine.getError('name')).toBe('Please fill in this field.')
     engine.reset()
     expect(engine.submitted).toBe(false)
     expect(engine.isTouched('name')).toBe(false)

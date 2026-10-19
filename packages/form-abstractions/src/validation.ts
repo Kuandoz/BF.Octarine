@@ -1,11 +1,11 @@
-import type { FormDefinition, ValidationRule } from './definition'
+import type { FormDefinition, LocalisableString, ValidationRule } from './definition'
 
 // Errors are message keys with parameters, not text: the server can
 // translate them, or hand them back for the client to translate. Text is
 // made at the edge, where the language is known.
 
 // What a validator returns. When it fails, `key` names the message
-// ("formRenderer.validation.minLength", or the generic "isn't valid" one when
+// ("validation.minLength", or the generic "isn't valid" one when
 // left out) and `params` fills it in (`{ min: 3 }`). `{ valid: value !== '' }`
 // is a whole validator result.
 export interface ValidatorResult {
@@ -70,7 +70,8 @@ export interface ValidationFailure {
   rule: string
   key: string
   params?: Record<string, unknown>
-  // The rule's own `message`, when the form gives one: a localisation key of
-  // the form, or literal text. It wins over `key`.
-  message?: string
+  // The rule's own `message`, when the form gives one: a key of the form's
+  // texts (or of the app's), literal text, or a choice of keys by condition,
+  // as labels have. It wins over `key`, and gets `params` too.
+  message?: LocalisableString
 }

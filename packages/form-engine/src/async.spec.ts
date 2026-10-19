@@ -118,7 +118,9 @@ describe('async rules', () => {
     await flush()
     check.calls.at(-1)!.fail()
     await expect(first).resolves.toBe(false)
-    expect(engine.getError('email')).toBe("This couldn't be checked right now. Try again later.")
+    expect(engine.getError('email')).toBe(
+      "This couldn't be checked right now. Please try again later.",
+    )
 
     const second = engine.submit()
     await flush()

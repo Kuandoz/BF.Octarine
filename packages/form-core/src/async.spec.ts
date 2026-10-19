@@ -42,10 +42,10 @@ describe('async validators', () => {
       },
     })
     await expect(settle(service.validate([{ type: 'offline' }], 'x', 'a'))).resolves.toMatchObject({
-      key: 'formRenderer.validation.unavailable',
+      key: 'validation.unavailable',
     })
     expect(service.validate([{ type: 'broken' }], 'x', 'a')).toMatchObject({
-      key: 'formRenderer.validation.unavailable',
+      key: 'validation.unavailable',
     })
   })
 

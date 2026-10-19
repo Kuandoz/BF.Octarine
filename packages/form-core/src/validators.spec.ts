@@ -202,4 +202,38 @@ describe('date / datetime', () => {
   it('rejects an unparseable value', () => {
     expect(run('date', 'not-a-date').valid).toBe(false)
   })
+
+  it('says why a date failed, with the bounds as calendar days', () => {
+    const bounds = { min: '2026-01-01', max: '2026-12-31' }
+    expect(run('date', 'not-a-date', bounds)).toEqual({ valid: false, key: 'validation.date' })
+    expect(run('date', '2025-06-01', { min: '2026-01-01' })).toEqual({
+      valid: false,
+      key: 'validation.dateMin',
+      params: { min: '2026-01-01' },
+    })
+    expect(run('date', '2027-06-01', { max: '2026-12-31' })).toMatchObject({
+      key: 'validation.dateMax',
+      params: { max: '2026-12-31' },
+    })
+    // With both bounds, the whole range, whichever side was missed.
+    expect(run('date', '2025-06-01', bounds)).toMatchObject({
+      key: 'validation.dateRange',
+      params: { min: '2026-01-01', max: '2026-12-31' },
+    })
+  })
+
+  it('resolves a relative bound to the day it names', () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const day = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+    expect(run('date', '2020-01-01', { min: 'today+1' })).toMatchObject({ params: { min: day } })
+  })
+
+  it('gives a datetime bound as a moment', () => {
+    const result = run('datetime', '2020-01-01T10:00:00Z', { min: '2026-01-01T09:30:00Z' })
+    expect(result).toMatchObject({
+      key: 'validation.datetimeMin',
+      params: { min: '2026-01-01T09:30:00.000Z' },
+    })
+  })
 })

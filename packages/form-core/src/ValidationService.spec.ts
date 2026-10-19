@@ -15,7 +15,7 @@ describe('ValidationService', () => {
     expect(service.validate(rules, '', 'someField')).toEqual({
       valid: false,
       rule: 'required',
-      key: 'formRenderer.validation.required',
+      key: 'validation.required',
     })
     expect(service.validate(rules, 'x', 'someField')).toEqual({ valid: true })
   })
@@ -26,7 +26,7 @@ describe('ValidationService', () => {
     expect(service.validate(rules, 'ab', 'someField')).toEqual({
       valid: false,
       rule: 'minLength',
-      key: 'formRenderer.validation.minLength',
+      key: 'validation.minLength',
       params: { min: 3 },
     })
   })
@@ -50,7 +50,7 @@ describe('ValidationService', () => {
       broken: () => ({ valid: false }),
     })
     expect(service.validate([{ type: 'broken' }], 1, 'someField')).toMatchObject({
-      key: 'formRenderer.validation.invalid',
+      key: 'validation.invalid',
     })
   })
 
@@ -58,7 +58,7 @@ describe('ValidationService', () => {
     const service = new ValidationService()
     const rules: ValidationRule[] = [{ type: 'required', message: 'Fill this in.' }]
     expect(service.validate(rules, '', 'someField')).toMatchObject({
-      key: 'formRenderer.validation.required',
+      key: 'validation.required',
       message: 'Fill this in.',
     })
   })

@@ -24,9 +24,13 @@ describe('@octarine/form-core', () => {
     expect(read(file)).not.toMatch(/\b(window|document|navigator|localStorage)\./)
   })
 
-  it('depends only on the abstractions and the expression parser', () => {
+  it('depends only on the abstractions, the catalogs and the expression parser', () => {
     const pkg = JSON.parse(read('../package.json'))
-    expect(Object.keys(pkg.dependencies)).toEqual(['@octarine/form-abstractions', 'subscript'])
+    expect(Object.keys(pkg.dependencies)).toEqual([
+      '@octarine/form-abstractions',
+      '@octarine/i18n',
+      'subscript',
+    ])
     expect(pkg.peerDependencies ?? {}).toEqual({})
   })
 })

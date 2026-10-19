@@ -156,15 +156,36 @@ function resolveDateBound(input: unknown): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed
 }
 
-function validateDateRange(context: ValidatorContext, messageKey: string): ValidatorResult {
+// Says why a date failed: `validation.date` for one that isn't a date, and
+// `…Min`, `…Max` or `…Range` (when both bounds are set) for one outside its
+// bounds, which come along as parameters, so the message can tell the
+// person which dates are allowed.
+function validateDateRange(
+  context: ValidatorContext,
+  baseKey: 'validation.date' | 'validation.datetime',
+): ValidatorResult {
   const { value, rule } = context
   const date = resolveDateBound(value)
-  if (!date) return { valid: false, key: messageKey }
+  if (!date) return { valid: false, key: baseKey }
   const min = resolveDateBound(rule.min)
   const max = resolveDateBound(rule.max)
-  if (min && date.getTime() < min.getTime()) return { valid: false, key: messageKey }
-  if (max && date.getTime() > max.getTime()) return { valid: false, key: messageKey }
-  return { valid: true }
+  const tooEarly = min !== undefined && date.getTime() < min.getTime()
+  const tooLate = max !== undefined && date.getTime() > max.getTime()
+  if (!tooEarly && !tooLate) return { valid: true }
+  const bound = (day: Date) =>
+    baseKey === 'validation.date' ? calendarDay(day) : day.toISOString()
+  if (min && max) {
+    return { valid: false, key: `${baseKey}Range`, params: { min: bound(min), max: bound(max) } }
+  }
+  return tooEarly
+    ? { valid: false, key: `${baseKey}Min`, params: { min: bound(min!) } }
+    : { valid: false, key: `${baseKey}Max`, params: { max: bound(max!) } }
+}
+
+// `2026-10-19`, in local time: the day the person would name.
+function calendarDay(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function compareValues(value: unknown, other: unknown, op: string): boolean {
@@ -190,14 +211,14 @@ function compareValues(value: unknown, other: unknown, op: string): boolean {
 // the `validators` option.
 export const builtInValidators: Readonly<ValidatorRegistry> = Object.freeze({
   required: ({ isEmpty: empty }) =>
-    empty ? { valid: false, key: 'formRenderer.validation.required' } : { valid: true },
+    empty ? { valid: false, key: 'validation.required' } : { valid: true },
   minLength: defineValidator({
     schema: ruleSchema({ value: { type: 'integer', minimum: 0 } }, ['value']),
     validate: skipWhenEmpty(({ value, rule }) => {
       const min = Number(rule.value)
       return lengthOf(value) >= min
         ? { valid: true }
-        : { valid: false, key: 'formRenderer.validation.minLength', params: { min } }
+        : { valid: false, key: 'validation.minLength', params: { min } }
     }),
   }),
   maxLength: defineValidator({
@@ -206,58 +227,48 @@ export const builtInValidators: Readonly<ValidatorRegistry> = Object.freeze({
       const max = Number(rule.value)
       return lengthOf(value) <= max
         ? { valid: true }
-        : { valid: false, key: 'formRenderer.validation.maxLength', params: { max } }
+        : { valid: false, key: 'validation.maxLength', params: { max } }
     }),
   }),
   pattern: defineValidator({
     schema: ruleSchema({ value: { type: 'string', format: 'regex' } }, ['value']),
     validate: skipWhenEmpty(({ value, rule }) => {
       const isValid = new RegExp(String(rule.value)).test(String(value))
-      return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.pattern' }
+      return isValid ? { valid: true } : { valid: false, key: 'validation.pattern' }
     }),
   }),
   email: skipWhenEmpty(({ value }) =>
-    EMAIL_PATTERN.test(String(value))
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.email' },
+    EMAIL_PATTERN.test(String(value)) ? { valid: true } : { valid: false, key: 'validation.email' },
   ),
   phone: skipWhenEmpty(({ value }) =>
     PHONE_PATTERN.test(String(value).trim())
       ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.phone' },
+      : { valid: false, key: 'validation.phone' },
   ),
   numeric: skipWhenEmpty(({ value }) =>
     NUMERIC_PATTERN.test(String(value))
       ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.numeric' },
+      : { valid: false, key: 'validation.numeric' },
   ),
   decimal: skipWhenEmpty(({ value }) =>
     DECIMAL_PATTERN.test(String(value))
       ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.decimal' },
+      : { valid: false, key: 'validation.decimal' },
   ),
   bool: skipWhenEmpty(({ value }) =>
-    typeof value === 'boolean'
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.bool' },
+    typeof value === 'boolean' ? { valid: true } : { valid: false, key: 'validation.bool' },
   ),
   insz: skipWhenEmpty(({ value }) =>
-    isValidInsz(String(value))
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.insz' },
+    isValidInsz(String(value)) ? { valid: true } : { valid: false, key: 'validation.insz' },
   ),
   iban: skipWhenEmpty(({ value }) =>
-    isValidIban(String(value))
-      ? { valid: true }
-      : { valid: false, key: 'formRenderer.validation.iban' },
+    isValidIban(String(value)) ? { valid: true } : { valid: false, key: 'validation.iban' },
   ),
   oneOf: defineValidator({
     schema: ruleSchema({ values: { type: 'array' } }, ['values']),
     validate: skipWhenEmpty(({ value, rule }) => {
       const allowed = Array.isArray(rule.values) ? rule.values : []
-      return allowed.includes(value)
-        ? { valid: true }
-        : { valid: false, key: 'formRenderer.validation.oneOf' }
+      return allowed.includes(value) ? { valid: true } : { valid: false, key: 'validation.oneOf' }
     }),
   }),
   // A single value or an array of values, every one of which must appear in
@@ -272,7 +283,7 @@ export const builtInValidators: Readonly<ValidatorRegistry> = Object.freeze({
       const items = Array.isArray(value) ? value : [value]
       return items.every((item) => allowed.includes(normalize(item)))
         ? { valid: true }
-        : { valid: false, key: 'formRenderer.validation.flags' }
+        : { valid: false, key: 'validation.flags' }
     }),
   }),
   // Cross-field comparison: against another path's live value (`rule.path`,
@@ -287,19 +298,15 @@ export const builtInValidators: Readonly<ValidatorRegistry> = Object.freeze({
     validate: skipWhenEmpty(({ value, rule, scope }) => {
       const other = rule.path !== undefined ? getProperty(scope, String(rule.path)) : rule.value
       const isValid = compareValues(value, other, String(rule.op ?? 'eq'))
-      return isValid ? { valid: true } : { valid: false, key: 'formRenderer.validation.compare' }
+      return isValid ? { valid: true } : { valid: false, key: 'validation.compare' }
     }),
   }),
   date: defineValidator({
     schema: ruleSchema({ min: dateBound, max: dateBound }),
-    validate: skipWhenEmpty((context) =>
-      validateDateRange(context, 'formRenderer.validation.date'),
-    ),
+    validate: skipWhenEmpty((context) => validateDateRange(context, 'validation.date')),
   }),
   datetime: defineValidator({
     schema: ruleSchema({ min: dateBound, max: dateBound }),
-    validate: skipWhenEmpty((context) =>
-      validateDateRange(context, 'formRenderer.validation.datetime'),
-    ),
+    validate: skipWhenEmpty((context) => validateDateRange(context, 'validation.datetime')),
   }),
 })

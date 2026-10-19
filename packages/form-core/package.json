@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@octarine/form-abstractions": "workspace:*",
+    "@octarine/i18n": "workspace:*",
     "subscript": "^10.8.1"
   },
   "devDependencies": {

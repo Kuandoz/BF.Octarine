@@ -7,11 +7,11 @@ import {
   declareFieldKeys,
   DEFAULT_REPEAT_TYPES,
   defaultListProvider,
-  defaultTranslationProvider,
   findClosest,
   FormValidator,
   type FormValidatorOptions,
   getProperty,
+  type Catalogs,
   type FieldCondition,
   builtInValidators,
   INVALID_KEY,
@@ -19,6 +19,7 @@ import {
   isEmpty,
   ListService,
   LocalisationService,
+  type MessageParams,
   type PathContext,
   removeProperty,
   resolvePathContext,
@@ -81,8 +82,12 @@ export interface FormEngineOptions extends FormValidatorOptions {
   model?: Record<string, unknown>
   // The language to show; default: the form's `localisations.default`.
   locale?: string
-  // Puts a message key and its parameters into words. Default: English text
-  // for the built-in validators' keys.
+  // The app's texts by language: Octarine's other languages
+  // (`@octarine/i18n/locales/nl.json`), changed words, and the keys of its
+  // own validators. Asked after the form's own `localisations`.
+  messages?: Catalogs
+  // The app's own translator (e.g. a bridge to vue-i18n), asked after
+  // `messages`; it returns undefined for a key it doesn't know.
   translate?: TranslationProvider['t']
   // Named lists a form uses without defining them itself.
   lists?: ListProvider
@@ -109,7 +114,6 @@ export class FormEngine {
   // The last answer of each async rule, per path: reused while the value is
   // the same, so a change elsewhere doesn't ask the server again.
   private _asyncAnswers = new Map<string, AsyncAnswer>()
-  private _translate: TranslationProvider['t']
   private _fieldTypes: Readonly<Record<string, FieldType>>
   private _validator: FormValidator
   private _localisationService: LocalisationService
@@ -128,7 +132,8 @@ export class FormEngine {
     const {
       model: initialModel = {},
       locale,
-      translate = defaultTranslationProvider.t,
+      messages,
+      translate,
       lists = defaultListProvider,
       fields = {},
       ...rules
@@ -146,7 +151,6 @@ export class FormEngine {
 
     this.definition = definition
     this._defaults = definition.defaults ?? {}
-    this._translate = translate
     this._fieldTypes = fields
     this._constants = definition.constants ?? {}
 
@@ -167,7 +171,8 @@ export class FormEngine {
     )
     this._validator = new FormValidator(definition, { ...rules, validators, repeatTypes })
     this._localisationService = new LocalisationService(definition.localisations, locale, {
-      t: translate,
+      messages,
+      translate,
     })
     this._listService = new ListService(definition.lists, lists)
     this._hideConditions = collectHideConditions(definition.components, repeatTypes)
@@ -284,11 +289,17 @@ export class FormEngine {
     const result = this.getValidationResult(path)
     // A rule still being checked shows nothing until the answer is in.
     if (!result || result.valid || result.pending) return undefined
-    // A rule's own message is the form's text (a localisation key or
-    // literal); otherwise the validator's key, in the app's words.
+    // A rule's own message is the form's text (a key of the form's or the
+    // app's, or literal text); otherwise the validator's key, in the app's
+    // words. Both get the rule's parameters.
     if (result.message)
-      return this.localise(result.message, this.resolvePathContext(path).repeatContext)
-    return this._translate(result.key || INVALID_KEY, result.params)
+      return this.localise(
+        result.message,
+        this.resolvePathContext(path).repeatContext,
+        result.params,
+      )
+    void this._locale.value
+    return this._localisationService.message(result.key || INVALID_KEY, result.params)
   }
 
   // Every error getError would show, in the order the fields appear on
@@ -500,25 +511,21 @@ export class FormEngine {
     return this._validator.isRequired(this._model, path, this.env)
   }
 
-  localise(key: LocalisableString | undefined, repeatContext?: RepeatContext): string {
-    const resolvedKey = typeof key === 'object' ? this.resolveLabelBranch(key, repeatContext) : key
+  // A form text in the current language. An object is a choice of keys by
+  // condition (see FormValidator.chooseText), evaluated in `repeatContext`'s
+  // row.
+  localise(
+    key: LocalisableString | undefined,
+    repeatContext?: RepeatContext,
+    params?: MessageParams,
+  ): string {
+    const resolvedKey =
+      key === undefined || typeof key === 'string'
+        ? key
+        : this._validator.chooseText(this._model, key, repeatContext, this.env)
     // Read the locale here so a label is redrawn when it changes.
     void this._locale.value
-    return this._localisationService.resolve(resolvedKey ?? '')
-  }
-
-  // Resolves a switch/case-shaped LocalisableString: each key is a candidate
-  // localisation key, each value a condition gating it, first truthy wins in
-  // object-key order (matches the legacy _forms system's label mechanism).
-  private resolveLabelBranch(
-    branches: Record<string, ConditionValue>,
-    repeatContext?: RepeatContext,
-  ): string | undefined {
-    for (const [candidateKey, condition] of Object.entries(branches)) {
-      if (this.resolveCondition(condition, false, repeatContext)) return candidateKey
-    }
-    console.warn('[form-engine] No branch matched in a localisable object', branches)
-    return undefined
+    return this._localisationService.resolve(resolvedKey ?? '', params)
   }
 
   // Wraps a validator so an async answer is kept for the value it was given

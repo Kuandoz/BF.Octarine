@@ -10,13 +10,8 @@ export type { FormValidatorOptions } from './FormValidator'
 export { jsLanguage } from './jsLanguage'
 export { ListService } from './ListService'
 export { LocalisationService } from './LocalisationService'
-export {
-  defaultListProvider,
-  defaultTranslationProvider,
-  interpolate,
-  INVALID_KEY,
-  UNAVAILABLE_KEY,
-} from './messages'
+export type { LocalisationOptions } from './LocalisationService'
+export { defaultListProvider, INVALID_KEY, UNAVAILABLE_KEY } from './messages'
 export {
   declareFieldKeys,
   DEFAULT_REPEAT_TYPES,
@@ -30,8 +25,12 @@ export {
   setProperty,
 } from './pathAccessors'
 export type { PathContext } from './pathAccessors'
-export { createLocalSubmissionValidator, validateSubmission } from './validateSubmission'
-export type { ValidateSubmissionOptions } from './validateSubmission'
+export {
+  createLocalSubmissionValidator,
+  translateErrors,
+  validateSubmission,
+} from './validateSubmission'
+export type { TranslatedError, ValidateSubmissionOptions } from './validateSubmission'
 export { settle, ValidationService } from './ValidationService'
 export {
   createValidatorContext,
@@ -48,3 +47,7 @@ export {
 } from './visibility'
 export type { FieldCondition } from './visibility'
 export { warnOnce } from './warn'
+
+// The catalogs and formatter, so an app needs only this package.
+export { formatMessage, mergeCatalogs } from '@octarine/i18n'
+export type { Catalog, Catalogs, Message, MessageParams } from '@octarine/i18n'

@@ -65,7 +65,7 @@ describe('fields the person cannot change', () => {
 
     engine.setValue('locked', false)
     expect(engine.isLocked('address.city')).toBe(false)
-    expect(engine.getError('address.city')).toBe('This field is required.')
+    expect(engine.getError('address.city')).toBe('Please fill in this field.')
   })
 
   it('evaluates a condition in its row', async () => {
@@ -76,7 +76,7 @@ describe('fields the person cannot change', () => {
     })
     engine.submit()
     expect(engine.getError('items.0.note')).toBeUndefined()
-    expect(engine.getError('items.1.note')).toBe('This field is required.')
+    expect(engine.getError('items.1.note')).toBe('Please fill in this field.')
   })
 
   it("doesn't let those errors stop the submit", async () => {

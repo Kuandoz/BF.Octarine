@@ -9,6 +9,8 @@ import {
   watch,
 } from 'vue'
 
+import { mergeCatalogs } from '@octarine/form-core'
+
 import type { FieldType } from './fields'
 import { FormEngine, type FormEngineOptions } from './FormEngine'
 import { clonePlain } from './mergeDeep'
@@ -43,7 +45,9 @@ export const FORMS_KEY: InjectionKey<Forms> = Symbol('octarine-form:forms')
  * global registries; two apps (or two Forms in one app) don't share any.
  *
  * ```ts
- * const forms = createForms({ fields: [textField], validators, translate: i18n.global.t })
+ * import nl from '@octarine/i18n/locales/nl.json'
+ *
+ * const forms = createForms({ fields: [textField], validators, messages: { nl } })
  * app.use(forms)
  * ```
  */
@@ -67,6 +71,7 @@ export function createForms(options: FormsOptions = {}): Forms {
           ...(shared.expressionLanguages ?? []),
         ],
         repeatTypes: [...(shared.repeatTypes ?? []), ...(own.repeatTypes ?? [])],
+        messages: mergeCatalogs(shared.messages, own.messages),
         fields: { ...fieldTypes, ...own.fields },
       })
     },

@@ -1,7 +1,11 @@
 import type { FormDefinition } from '@octarine/form-abstractions'
 import { describe, expect, it } from 'vitest'
 
-import { createLocalSubmissionValidator, validateSubmission } from './validateSubmission'
+import {
+  createLocalSubmissionValidator,
+  translateErrors,
+  validateSubmission,
+} from './validateSubmission'
 
 const definition: FormDefinition = {
   components: [
@@ -34,7 +38,7 @@ describe('validateSubmission', () => {
       {
         path: 'name',
         rule: 'minLength',
-        key: 'formRenderer.validation.minLength',
+        key: 'validation.minLength',
         params: { min: 3 },
       },
     ])
@@ -46,7 +50,7 @@ describe('validateSubmission', () => {
       {
         path: 'phone',
         rule: 'required',
-        key: 'formRenderer.validation.required',
+        key: 'validation.required',
         message: 'Phone.Required',
       },
     ])
@@ -89,7 +93,7 @@ describe('validateSubmission', () => {
     )
     expect(result.errors.map(({ path, key }) => ({ path, key }))).toEqual([
       { path: 'code', key: 'even' },
-      { path: 'note', key: 'formRenderer.validation.required' },
+      { path: 'note', key: 'validation.required' },
     ])
   })
 
@@ -153,5 +157,58 @@ describe('validateSubmission options', () => {
     expect((await validateSubmission(custom, model, { repeatTypes: ['travellers'] })).valid).toBe(
       true,
     )
+  })
+
+  it('chooses a message by condition against the submitted row', async () => {
+    const guests: FormDefinition = {
+      components: [
+        {
+          type: 'repeat',
+          path: 'guests',
+          components: [
+            { type: 'number', path: 'years' },
+            { type: 'text', path: 'name' },
+          ],
+        },
+      ],
+      validations: {
+        'guests.*.name': [
+          { type: 'required', message: { childName: 'years < 12', guestName: true } },
+        ],
+      },
+    }
+    const result = await validateSubmission(guests, { guests: [{ years: 8 }, { years: 40 }] })
+    expect(result.errors.map((error) => error.message)).toEqual(['childName', 'guestName'])
+  })
+})
+
+describe('translateErrors', () => {
+  const form: FormDefinition = {
+    components: [
+      { type: 'text', path: 'name' },
+      { type: 'text', path: 'postcode' },
+    ],
+    validations: {
+      name: [{ type: 'required' }],
+      postcode: [{ type: 'maxLength', value: 4, message: 'postcodeTooLong' }],
+    },
+    localisations: {
+      default: 'nl',
+      nl: { postcodeTooLong: 'Maximaal {max} cijfers.' },
+    },
+  }
+  const nl = { nl: { 'validation.required': 'Gelieve dit veld in te vullen.' } }
+
+  it("puts the errors into words, a rule's own message from the form", async () => {
+    const { errors } = await validateSubmission(form, { postcode: '12345' })
+    expect(translateErrors(errors, form, 'nl-BE', { messages: nl })).toEqual([
+      expect.objectContaining({ path: 'name', text: 'Gelieve dit veld in te vullen.' }),
+      expect.objectContaining({ path: 'postcode', text: 'Maximaal 4 cijfers.' }),
+    ])
+  })
+
+  it("ends with Octarine's English", async () => {
+    const { errors } = await validateSubmission(form, {})
+    expect(translateErrors(errors, form, 'es')[0]!.text).toBe('Please fill in this field.')
   })
 })

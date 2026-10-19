@@ -17,16 +17,17 @@ const result = await validateSubmission(definition, submittedModel, { env: { lan
 
 result.valid // false
 result.errors
-// [{ path: 'name', rule: 'minLength', key: 'formRenderer.validation.minLength', params: { min: 3 } }]
+// [{ path: 'name', rule: 'minLength', key: 'validation.minLength', params: { min: 3 } }]
 ```
 
 - Every rule in `definition.validations` runs, with `items.*.quantity` expanded against the
   submitted rows. Hidden fields are checked like any other.
 - Errors are **message keys with parameters**, not text. The server can translate them, or send
-  them back for the client to translate. A rule's own `message` (a localisation key of the form, or
-  literal text) comes along as `message`.
+  them back for the client to translate. A rule's own `message` (a key of the form's texts, or
+  literal text) comes along as `message`. A date outside its bounds says which bound
+  (`validation.dateMin`, `dateMax`, `dateRange`), with the bounds as parameters.
 - Async validators (a promise) are waited for. One that rejects or throws fails closed, with
-  `formRenderer.validation.unavailable`.
+  `validation.unavailable`.
 - A field the model leaves out reads as `undefined` in expressions, as it does in the browser, so a
   required-if doesn't turn on because a key is missing. The model you pass in isn't changed.
 
@@ -42,6 +43,24 @@ Options:
 
 Register custom validators and functions in a module that the app and the server both import: a
 validator that exists only on the client lets anything through on the server.
+
+### Errors in words
+
+A server that answers with text instead of keys puts the errors into words with `translateErrors`.
+It looks texts up the way the browser does: a rule's own `message` in the form's `localisations`,
+then the app's `messages` and `translate`, then Octarine's English, along the language chain
+(`nl-BE` → `nl` → the form's default → `en`).
+
+```ts
+import nl from '@octarine/i18n/locales/nl.json'
+
+const { errors } = await validateSubmission(definition, model, rules)
+translateErrors(errors, definition, 'nl-BE', { messages: { nl } })
+// [{ path: 'name', rule: 'required', key: 'validation.required', text: 'Gelieve dit veld in te vullen.' }]
+```
+
+A rule's `message` that is a choice by condition is chosen by `validateSubmission`, against the
+submitted model, so its errors carry a plain key.
 
 ### Rules only the server can check
 
@@ -71,7 +90,7 @@ const result = await validator.validate(definition, model)
 | `getProperty`, `setProperty`, `resolvePathContext`, …              | Dot-paths into a model, and which segments are rows (`items.2.name` → `items.*.name`).                                        |
 | `collectHideConditions`, `collectFields`, `findClosest`            | What the definition says about a path: the `hide` conditions on the way to it, its field.                                     |
 | `LocalisationService`, `ListService`                               | A form's own texts and lists.                                                                                                 |
-| `defaultTranslationProvider`                                       | English text for the built-in validators' keys.                                                                               |
+| `translateErrors`                                                  | Errors in words, for a server that answers with text (see below).                                                             |
 
 ## Rules for this package
 

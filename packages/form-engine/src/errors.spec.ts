@@ -34,21 +34,25 @@ describe('when errors are shown', () => {
     engine.setValue('email', 'a')
     engine.touch('email')
     expect(engine.isTouched('email')).toBe(true)
-    expect(engine.getError('email')).toBe('Enter a valid email address.')
+    expect(engine.getError('email')).toBe(
+      'Please enter a valid email address, like name@example.com.',
+    )
   })
 
   it('validates a field that is left without typing', async () => {
     const engine = new FormEngine(definition)
     engine.touch('name')
-    expect(engine.getError('name')).toBe('This field is required.')
+    expect(engine.getError('name')).toBe('Please fill in this field.')
   })
 
   it('updates a shown error as the value changes, and clears it once fixed', async () => {
     const engine = new FormEngine(definition)
     engine.touch('email')
-    expect(engine.getError('email')).toBe('This field is required.')
+    expect(engine.getError('email')).toBe('Please fill in this field.')
     engine.setValue('email', 'ada@')
-    expect(engine.getError('email')).toBe('Enter a valid email address.')
+    expect(engine.getError('email')).toBe(
+      'Please enter a valid email address, like name@example.com.',
+    )
     engine.setValue('email', 'ada@example.com')
     expect(engine.getError('email')).toBeUndefined()
   })
@@ -57,8 +61,8 @@ describe('when errors are shown', () => {
     const engine = new FormEngine(definition)
     expect(await engine.submit()).toBe(false)
     expect(engine.submitted).toBe(true)
-    expect(engine.getError('email')).toBe('This field is required.')
-    expect(engine.getError('name')).toBe('This field is required.')
+    expect(engine.getError('email')).toBe('Please fill in this field.')
+    expect(engine.getError('name')).toBe('Please fill in this field.')
   })
 
   it('submits when every required value is there', async () => {
@@ -73,7 +77,7 @@ describe('when errors are shown', () => {
 
     engine.setValue('wantsCall', true)
     expect(await engine.submit()).toBe(false)
-    expect(engine.getError('phone')).toBe('This field is required.')
+    expect(engine.getError('phone')).toBe('Please fill in this field.')
   })
 
   it('has text for an error whose validator gave none', async () => {
@@ -85,7 +89,7 @@ describe('when errors are shown', () => {
       { model: {}, validators: { silent: () => ({ valid: false }) } },
     )
     engine.touch('code')
-    expect(engine.getError('code')).toBe("This value isn't valid.")
+    expect(engine.getError('code')).toBe("This value isn't valid. Please check it.")
   })
 })
 
@@ -127,7 +131,7 @@ describe('getErrors', () => {
     ])
     expect(engine.getErrors()[0]).toEqual({
       path: 'name',
-      message: 'This field is required.',
+      message: 'Please fill in this field.',
       label: '',
     })
   })
@@ -136,7 +140,7 @@ describe('getErrors', () => {
     const engine = new FormEngine(definition, { model: model() })
     engine.touch('email')
     expect(engine.getErrors()).toEqual([
-      { path: 'email', message: 'This field is required.', label: '' },
+      { path: 'email', message: 'Please fill in this field.', label: '' },
     ])
   })
 
@@ -209,7 +213,7 @@ describe('what an error says about its field', () => {
     expect(engine.isHidden('phone')).toBe(true)
     expect(engine.getErrors().find((error) => error.path === 'phone')).toEqual({
       path: 'phone',
-      message: "This value doesn't match the expected format.",
+      message: 'Please enter this in the expected format.',
       label: 'Phone',
     })
   })

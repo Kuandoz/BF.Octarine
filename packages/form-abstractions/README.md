@@ -36,7 +36,7 @@ back to the client.
 | `ExpressionLanguage`, `CompiledExpression` | form-core's `jsLanguage`; FEEL later, as its own package.        |
 | `Validator`, `ValidatorContext`            | the built-in validators, and your own.                           |
 | `SubmissionValidator`                      | form-core's local one; a remote one that calls the form service. |
-| `TranslationProvider`                      | your app's i18n (e.g. a bridge to vue-i18n).                     |
+| `TranslationProvider`                      | your app's i18n (e.g. a bridge to vue-i18n), by locale.          |
 | `ListProvider`                             | your app's source of named lists.                                |
 
 ## Rules for this package

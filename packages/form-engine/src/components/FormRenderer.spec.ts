@@ -89,7 +89,7 @@ describe('FormRenderer', () => {
     expect(errors).toEqual([
       {
         path: 'name',
-        message: 'This field is required.',
+        message: 'Please fill in this field.',
         label: 'Name',
         target: input.attributes('id'),
       },

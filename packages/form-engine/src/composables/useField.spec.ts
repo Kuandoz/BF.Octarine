@@ -103,7 +103,7 @@ describe('useField', () => {
     expect(field.error.value).toBeUndefined()
     field.onBlur()
     expect(engine.isTouched('firstName')).toBe(true)
-    expect(field.error.value).toBe('This field is required.')
+    expect(field.error.value).toBe('Please fill in this field.')
   })
 
   it("passes on only the field's own settings in attrs", () => {

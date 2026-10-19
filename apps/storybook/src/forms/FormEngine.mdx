@@ -32,7 +32,9 @@ Things to try in the form above:
   `condition`). A hidden field is still validated, so a form asks for a value only while it is
   shown by pairing the two.
 - **Switch the language** in the toolbar. The form follows the page language (`<html lang>`) unless
-  it gets a `locale`; a `FormRenderer` keeps what was filled in when its `locale` changes.
+  it gets a `locale`; a `FormRenderer` keeps what was filled in when its `locale` changes. The
+  labels come from the form's `localisations`, the errors from `@octarine/i18n` (passed to
+  `createForms` as `messages`), so both switch.
 - **Narrow the window.** Half and third widths stack when the form is narrow.
 
 ## Lists
@@ -82,17 +84,20 @@ const { id, value, label, hint, required, disabled, readonly, error, onBlur } = 
 </template>
 ```
 
-An app sets up its field types once, with the validators and functions every form shares, and
-renders a form with `useForm`:
+An app sets up its field types once, with the validators, functions and languages every form
+shares, and renders a form with `useForm`:
 
 ```ts
 // main.ts
+import nl from '@octarine/i18n/locales/nl.json'
+
 const forms = createForms({
   fields: [
     defineField({ type: 'text', component: TextField }),
     defineField({ type: 'repeat', component: RepeatField, rows: true }),
   ],
   validators,
+  messages: { nl }, // English is built in
 })
 app.use(forms)
 ```

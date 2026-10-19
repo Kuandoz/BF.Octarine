@@ -16,7 +16,9 @@ export type LocalisableString = string | Record<string, ConditionValue>
 
 export interface ValidationRule {
   type: string
-  message?: string
+  // Text to show instead of the validator's own message; see
+  // ValidationFailure.message.
+  message?: LocalisableString
   // Gates whether this rule runs at all. Unlike hide/disabled/readonly,
   // defaults toward the rule staying *active* if the expression throws —
   // see ExpressionService/ValidationService for why.

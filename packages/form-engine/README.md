@@ -175,19 +175,20 @@ const forms = createForms({
   functions: { workingDays }, // for expressions, besides age()
   expressionLanguages: [feelLanguage], // besides 'js'
   lists: { getList: async (name) => (await fetch(`/api/lists/${name}`)).json() },
-  translate: (key, params) => i18n.global.t(key, params),
+  messages: { nl, fr }, // from @octarine/i18n/locales/*.json
 })
 ```
 
-| Option                | What it does                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| `fields`              | The field types, from `defineField`.                                                  |
-| `validators`          | Validators for every form, added to the built-in ones (same name replaces one).       |
-| `functions`           | Functions expressions can call, besides `age()`.                                      |
-| `expressionLanguages` | Languages a form can name in `definition.expressions`, besides `js`.                  |
-| `repeatTypes`         | More field types with rows (`defineField({ rows: true })` adds them already).         |
-| `lists`               | A `ListProvider` for named lists a form doesn't define itself.                        |
-| `translate`           | Puts a message key and its parameters into words. Default: English for the built-ins. |
+| Option                | What it does                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| `fields`              | The field types, from `defineField`.                                                 |
+| `validators`          | Validators for every form, added to the built-in ones (same name replaces one).      |
+| `functions`           | Functions expressions can call, besides `age()`.                                     |
+| `expressionLanguages` | Languages a form can name in `definition.expressions`, besides `js`.                 |
+| `repeatTypes`         | More field types with rows (`defineField({ rows: true })` adds them already).        |
+| `lists`               | A `ListProvider` for named lists a form doesn't define itself.                       |
+| `messages`            | Texts by language: Octarine's other languages, changed words, your validators' keys. |
+| `translate`           | Your own translator, asked after `messages`; returns `undefined` for an unknown key. |
 
 There are no global registries: two setups (two apps, or a test next to an
 app) share nothing. Without an installed setup, a form has no field types and
@@ -482,20 +483,26 @@ A validator the server doesn't know lets anything through there, so keep
 custom validators in a module that the app and the server both import (see
 [`createForms`](#setting-up-createforms)).
 
-`engine.getError(path)` puts a result into words with `translate` (see
-[`createForms`](#setting-up-createforms)). By default that ships English text
-for the built-in validators' keys (`formRenderer.validation.required`, …) and
-otherwise echoes the key back.
+`engine.getError(path)` puts a result into words in the current language (see
+[Localisation](#localisation)): the validator's key (`validation.required`, …)
+comes from the app's `messages` or `translate`, else Octarine's English.
 
 A rule can also carry its own `message`, which wins over the validator's key.
-It is localised like a label: a key in the form's `localisations`, or literal
-text:
+It is localised like a label: a key in the form's `localisations` (or the
+app's `messages`), or literal text, and it gets the rule's parameters. It can
+also be a choice by condition, like a label:
 
 ```ts
 validations: {
-  otherMunicipality: [{ type: 'required', message: 'Municipality.Required' }]
+  otherMunicipality: [{ type: 'required', message: 'Municipality.Required' }],
+  postcode: [{ type: 'maxLength', value: 4, message: 'Postcode.TooLong' }], // "At most {max} digits."
+  'guests.*.name': [{ type: 'required', message: { 'Guest.ChildName': 'years < 12', 'Guest.Name': true } }],
 }
 ```
+
+The form's `localisations` never reword a validator's own message: a form that
+wants other words for a rule says so in that rule, so it can't change every
+error by accident.
 
 For rules of a single form, pass `validators` to `useForm` (or
 `createEngine`); they are added to the app's for that form only.
@@ -518,8 +525,8 @@ address taken?). Until it settles the path is **pending**:
 `engine.submitting` is true, `FormRenderer` marks the `<form>` with
 `aria-busy` and ignores a second submit. A check that couldn't run (the
 promise rejected, or the validator threw) fails closed with
-`formRenderer.validation.unavailable` ("This couldn't be checked right now.
-Try again later.") and is tried again on the next submit.
+`validation.unavailable` ("This couldn't be checked right now. Please try
+again later.") and is tried again on the next submit.
 
 **A rule that needs data only the server has** stays on the server.
 Register the real validator there; on the client, register
@@ -710,9 +717,40 @@ already mounted (e.g. a WYSIWYG builder's properties panel editing
 is itself
 resolved against the same table (self-referential, capped at 5 levels deep so
 a circular reference can't hang). If the key isn't in the form's own table at
-all, resolution falls through to `translate` (see
+all, resolution falls through to the app's `messages` and `translate` (see
 [`createForms`](#setting-up-createforms)), and finally to the raw key itself — so an
 unresolved key is never worse than showing the literal text an author wrote.
+
+**Languages.** Every lookup walks a chain of languages: the exact locale, its
+language, the form's `default`, then English (`nl-BE` → `nl` → `default` → `en`),
+in each source in turn:
+
+1. the form's `localisations` (labels, hints, a rule's own `message`; not a
+   validator's key);
+2. the app's `messages` (`createForms`, combined per language with those of
+   `useForm`);
+3. the app's `translate(key, params, locale)`, which returns `undefined` for a
+   key it doesn't know;
+4. Octarine's English, from `@octarine/i18n`.
+
+Octarine's other languages are files to import:
+
+```ts
+import nl from '@octarine/i18n/locales/nl.json'
+
+createForms({ fields, messages: { nl, 'nl-BE': { 'validation.required': '…' } } })
+```
+
+**Parameters and plurals.** `{name}` is a parameter (`{max}` of a `maxLength`
+rule), formatted for the language; `{min:date}` and `{min:datetime}` write a
+date out in full. A text that depends on a number lists its plural forms, and
+the form is picked with `Intl.PluralRules`:
+
+```json
+"Postcode.TooLong": { "one": "At most {max} digit.", "other": "At most {max} digits." }
+```
+
+`{{Other.Key}}` (two braces) still refers to another text of the form.
 
 **Switch/case labels.** A field's `label` (and a select option's `label`) isn't
 limited to a plain string — it can be a `LocalisableString`:

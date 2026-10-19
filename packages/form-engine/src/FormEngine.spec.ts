@@ -151,16 +151,15 @@ describe('FormEngine', () => {
     expect(engine.getValidationResult('code')?.valid).toBe(true)
   })
 
-  it('resolves the built-in required message through the default translation provider', () => {
+  it("puts the built-in required message into Octarine's English by default", () => {
     const engine = new FormEngine(definition)
     engine.submit()
-    expect(engine.getError('firstName')).toBe('This field is required.')
+    expect(engine.getError('firstName')).toBe('Please fill in this field.')
   })
 
-  it('localizes validator messages via a custom translation provider', () => {
+  it("localizes validator messages with the app's translate", () => {
     const engine = new FormEngine(definition, {
-      translate: (key) =>
-        key === 'formRenderer.validation.required' ? 'Dit veld is verplicht.' : key,
+      translate: (key) => (key === 'validation.required' ? 'Dit veld is verplicht.' : undefined),
     })
     engine.submit()
     expect(engine.getError('firstName')).toBe('Dit veld is verplicht.')
@@ -179,10 +178,10 @@ describe('FormEngine', () => {
     expect(engine.getValidationResult('code')).toEqual({
       valid: false,
       rule: 'minLength',
-      key: 'formRenderer.validation.minLength',
+      key: 'validation.minLength',
       params: { min: 3 },
     })
-    expect(engine.getError('code')).toBe('formRenderer.validation.minLength:{"min":3}')
+    expect(engine.getError('code')).toBe('validation.minLength:{"min":3}')
   })
 
   it("localises a rule's own message through the form's localisations", () => {

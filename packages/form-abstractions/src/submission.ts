@@ -2,9 +2,12 @@ import type { FormDefinition } from './definition'
 import type { ValidationFailure } from './validation'
 
 // One rule that failed, for a submitted model.
-export interface SubmissionError extends Omit<ValidationFailure, 'valid' | 'pending'> {
+export interface SubmissionError extends Omit<ValidationFailure, 'valid' | 'pending' | 'message'> {
   // The resolved path, e.g. "items.2.quantity".
   path: string
+  // The rule's own message, as a key or text: a choice by condition is
+  // already made, against the submitted model.
+  message?: string
 }
 
 export interface SubmissionResult {

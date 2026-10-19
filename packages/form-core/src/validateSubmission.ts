@@ -7,7 +7,8 @@ import type {
 } from '@octarine/form-abstractions'
 
 import { FormValidator, type FormValidatorOptions } from './FormValidator'
-import { declareFieldKeys } from './pathAccessors'
+import { LocalisationService, type LocalisationOptions } from './LocalisationService'
+import { declareFieldKeys, resolvePathContext } from './pathAccessors'
 import { settle } from './ValidationService'
 
 export interface ValidateSubmissionOptions extends FormValidatorOptions, SubmissionOptions {}
@@ -29,15 +30,49 @@ export async function validateSubmission(
   // failing the condition (which would keep a required-if active).
   const declared = copyPlain(model) as Record<string, unknown>
   declareFieldKeys(definition.components, declared, options.repeatTypes)
-  const results = new FormValidator(definition, options).validateAll(declared, options.env)
+  const validator = new FormValidator(definition, options)
+  const results = validator.validateAll(declared, options.env)
   const errors: SubmissionError[] = []
   for (const [path, pending] of results) {
     const result = await settle(pending)
     if (result.valid || result.pending) continue
-    const { valid: _valid, pending: _pending, ...failure } = result
-    errors.push({ path, ...failure })
+    const { valid: _valid, pending: _pending, message, ...failure } = result
+    // A message chosen by condition is chosen here, against this model.
+    const { repeatContext } = resolvePathContext(declared, path)
+    const chosen =
+      message === undefined
+        ? undefined
+        : validator.chooseText(declared, message, repeatContext, options.env)
+    errors.push({ path, ...failure, ...(chosen !== undefined && { message: chosen }) })
   }
   return { valid: errors.length === 0, errors }
+}
+
+export interface TranslatedError extends SubmissionError {
+  // The error in words, in the requested language.
+  text: string
+}
+
+/**
+ * The errors of validateSubmission in words, for a server that answers with
+ * text instead of keys. Uses the same lookup as the browser: a rule's own
+ * `message` from the form's texts, then the app's `messages` and
+ * `translate`, then Octarine's English.
+ */
+export function translateErrors(
+  errors: readonly SubmissionError[],
+  definition: FormDefinition,
+  locale: string | undefined,
+  options: LocalisationOptions = {},
+): TranslatedError[] {
+  const texts = new LocalisationService(definition.localisations, locale, options)
+  return errors.map((error) => ({
+    ...error,
+    text:
+      error.message !== undefined
+        ? texts.resolve(error.message, error.params)
+        : texts.message(error.key, error.params),
+  }))
 }
 
 // A deep copy of plain data. structuredClone would throw on the reactive

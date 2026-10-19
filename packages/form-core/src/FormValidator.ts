@@ -3,6 +3,7 @@ import type {
   ExpressionFunction,
   ExpressionLanguage,
   FormDefinition,
+  LocalisableString,
   RepeatContext,
   ValidationResult,
   ValidatorRegistry,
@@ -13,6 +14,7 @@ import { findExpressionLanguage } from './expressions'
 import { jsLanguage } from './jsLanguage'
 import { expandWildcardPath, getProperty, getScope, resolvePathContext } from './pathAccessors'
 import { ValidationService } from './ValidationService'
+import { warnOnce } from './warn'
 
 export interface FormValidatorOptions {
   // Added to the built-in validators; one with the same name replaces it.
@@ -84,6 +86,25 @@ export class FormValidator {
       { scope: getScope(model, repeatContext), rootScope: model, env },
       defaultResult,
     )
+  }
+
+  // The key a LocalisableString stands for: a string is one already; an
+  // object is a switch over keys, each gated by a condition, and the first
+  // that holds wins, in object-key order. There's no dedicated "default"
+  // key; a last entry with the condition `true` is the else-branch. No
+  // branch holding gives undefined.
+  chooseText(
+    model: Model,
+    text: LocalisableString,
+    repeatContext?: RepeatContext,
+    env: Env = {},
+  ): string | undefined {
+    if (typeof text === 'string') return text
+    for (const [key, condition] of Object.entries(text)) {
+      if (this.resolveCondition(model, condition, false, repeatContext, env)) return key
+    }
+    warnOnce('[form-core] No branch matched in a localisable object', text)
+    return undefined
   }
 
   validatePath(model: Model, path: string, env: Env = {}): ValidationResult {

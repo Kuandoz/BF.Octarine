@@ -75,7 +75,7 @@ function onInvalid() {
           :key="attempts"
           :errors="summaryOf(engine)"
         />
-        <p v-if="hasRequired" class="text-body-sm text-fg-muted">{{ t.requiredNote }}</p>
+        <p v-if="hasRequired" class="text-body-sm text-fg-muted">{{ t('form.requiredNote') }}</p>
       </template>
       <OButton type="submit" class="self-start" icon="paper-airplane">Send</OButton>
     </FormRenderer>
