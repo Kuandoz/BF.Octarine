@@ -153,12 +153,34 @@ Abstractions that keep the "where does it run" choice open:
   (`validation.required`), no aliases for the old ones; an app gives `messages`, `translate`
   or both; a form never replaces a built-in message by itself, a rule names its own `message`.
   Flemish Dutch with "je", polite requests ("Please…", "Gelieve…", "Veuillez…", "Bitte…").
+- **Texts of custom fields and validators** (steps 6 and 9): a text lives with its owner.
+  - Octarine's own texts stay in `@octarine/i18n`: the server needs the validation texts, and a
+    translator gets one file per language.
+  - A field type ships its own texts as JSON next to its component (not an SFC `<i18n>` block:
+    that needs a Vite plugin in every app, doesn't reach the server, and author-built components
+    aren't SFCs). `defineField({ messages })` and `defineValidator({ messages })` take `Catalogs`.
+    File names: `IbanInput.messages.json` (every language, `{ en: {…}, nl: {…} }`) or
+    `IbanInput.messages.nl.json` (one per language, so an app bundles only what it imports).
+  - **Scoped to the field:** inside it `t('lookup')`, no prefix needed; two field types can't
+    clash. A field type can't redefine Octarine's keys (`common.remove`, `validation.required`);
+    Octarine warns when one does.
+  - **No implicit overrides.** Text the form designer may change is a property of the field
+    (`lookupLabel`), localisable like `label` and filled from the form's `localisations`; left
+    empty, the field shows its own default. Other texts can't be changed by a form.
+  - As an escape hatch, not the default way, an app can reach a field's fixed texts by the
+    type's name in its own `messages` (`iban.lookup`): to add a language the field doesn't ship,
+    or to fix a translation. Never through a form's table.
+  - Lookup inside a field: the app's `messages` → the app's `translate` → the field type's texts →
+    Octarine's texts → the key itself.
+  - **Shared words:** `common.*` in `@octarine/i18n` (`common.ok`, `common.cancel`, `common.save`,
+    `common.close`, `common.remove`), reachable from every `t()`. Only for action labels standing
+    on their own; a word with context gets its own key, even when the English is the same
+    ("Close" the verb or the adjective, French "Aucun/Aucune").
+  - `checkCatalogs(messages)` exported from `@octarine/i18n` (the locales spec's check), so a
+    field author's spec finds missing keys and placeholders. Later maybe a script that gathers
+    every `*.messages*.json` for a translator and splits it back.
 
 ## Open decisions
-
-- **A scope per field type**: `defineField({ messages })` so a custom component ships its own
-  texts (`field.iban.lookup`), which forms and apps can override. Not built: with step 6, step 9, or
-  sooner?
 
 - **A failed rule on a disabled or read-only field** blocks nothing in the browser, since it isn't
   shown, so the submit goes through and the server rejects it. Should the form say something
@@ -250,7 +272,7 @@ Left over:
 - [ ] An app registers its languages twice: `createMessages` for the components and
       `createForms({ messages })` for the forms. `@octarine/forms` (step 6) can pass one to the
       other.
-- [ ] A scope per field type (`defineField({ messages })`), see open decisions.
+- [ ] Texts of custom fields and validators: decided (see decisions), built in steps 6 and 9.
 - [ ] "Today" is the checker's clock and time zone, so near midnight the browser and the server can
       disagree about a date bound. The server would need the user's time zone in `env`.
 - [ ] `MessageKey` in `@octarine/vue`'s types reads `@octarine/i18n/locales/en.json`, so an app's
@@ -287,6 +309,9 @@ every theme), then add its `defineField` in `@octarine/forms`.
 - [ ] Harder ones: Combobox/autocomplete and file upload (full WAI-ARIA keyboard patterns).
 - [ ] Repeat component on `FormRows` with Add/Remove.
 - [ ] Sanitise HTML/rich-text fields.
+- [ ] `common.*` words in `@octarine/i18n` (with the first dialog or button bar).
+- [ ] `useFieldMessages()`: the field's `t()`, following the form's language. The controls' texts
+      go through it from the start, so step 9 only adds the field type's own catalog.
 
 ### 7. Monaco JSON editor
 
@@ -311,6 +336,9 @@ every theme), then add its `defineField` in `@octarine/forms`.
 - [ ] **Form authors** build reusable parts (a person block, an address block) with parameters. The
       bar: someone with a basic understanding of HTML, JS and Tailwind can make one. How their
       HTML and JS run safely is an open decision (above).
+- [ ] Texts per field type and validator: `defineField({ messages })`, `defineValidator({ messages })`,
+      scoped to the field, with changeable text as localisable properties; `checkCatalogs` exported
+      from `@octarine/i18n`. See decisions.
 
 ### 10. Node form service
 
