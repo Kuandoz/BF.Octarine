@@ -71,6 +71,7 @@ Done so far:
 ## Package layers
 
 ```
+i18n               every text Octarine writes, one JSON file per language (planned, step 4)
 form-abstractions  types and interfaces only, no runtime code (+ the JSON schema, as data)
        ↓
 form-core          validation runtime: no Vue, no DOM; runs in Node and in the browser
@@ -144,7 +145,16 @@ Abstractions that keep the "where does it run" choice open:
   does on load, so a key the client left out reads as `undefined` instead of keeping a required-if
   active.
 
+- **Localisation** (step 4): see the plan in step 4. In short: one `@octarine/i18n` package
+  with a JSON file per language for the components and the validation messages; flat keys
+  (`validation.required`), no aliases for the old ones; an app gives `messages`, `translate`
+  or both; a form never replaces a built-in message by itself, a rule names its own `message`.
+  Flemish Dutch with "je", polite requests ("Please…", "Gelieve…", "Veuillez…", "Bitte…").
+
 ## Open decisions
+
+- **A scope per field type**: `defineField({ messages })` so a custom component ships its own
+  texts (`field.iban.lookup`), which forms and apps can override. Now (in step 4) or later?
 
 - **A failed rule on a disabled or read-only field** blocks nothing in the browser, since it isn't
   shown, so the submit goes through and the server rejects it. Should the form say something
@@ -172,7 +182,6 @@ All items done. Left over, for later steps:
 
 All items done. Left over, for later steps:
 
-- [ ] Message keys still start with `formRenderer.validation.`; flat keys come with step 4.
 - [ ] `FormEngine.spec.ts` and `expressions.spec.ts` still test some rules through the engine;
       move pure ones to form-core when touching them.
 
@@ -208,10 +217,61 @@ Left over:
 
 ### 4. Localisation
 
-- [ ] Reactive locale (today it's fixed when the engine is created).
-- [ ] One `translate` hook; move the engine's validation messages (`services.ts`
-      `DEFAULT_MESSAGES`) into Octarine's catalogs (en, nl, fr, de).
-- [ ] Flat message keys, plurals with `Intl.PluralRules`.
+Planned and agreed; not started. The locale is already reactive (`setLocale`, step 3).
+
+**Package `@octarine/i18n`**: no Vue, no DOM, no dependencies (a layer like `icons`).
+
+- [ ] `locales/{en,nl,fr,de}.json`: every text Octarine writes, the components' and the
+      validation messages, in one file per language. Translating a language means copying one
+      file (from any language) and translating its values. `locales/en.descriptions.json` gives
+      translators the context of each key, since JSON has no comments.
+- [ ] `format`: `{name}` parameters, `{min:date}` and `{amount:number}` formatted with `Intl` in
+      the message's language, plurals as `{ "one": "…", "other": "…" }` picked with
+      `Intl.PluralRules`.
+- [ ] Language fallback in every lookup: `nl-BE` → `nl` → the form's default → `en`. English is
+      always included; other languages are imported (or lazily loaded) by the app.
+- [ ] A spec checks every language: no missing or unknown keys, the same placeholders as English.
+
+**Components** (`@octarine/vue`), first, with no visible change:
+
+- [ ] The texts in `src/i18n/messages.ts` move to the catalogs as data with flat keys
+      (`field.optional`, `field.required`, `form.requiredNote`, `error.label`,
+      `errorSummary.title`, `input.clear`, `status.loading`, `counter.maxLength`,
+      `counter.charactersLeft`, `counter.charactersOver`); the plural functions become
+      `one`/`other` entries. `createMessages` takes catalogs; `useMessages()` keeps working.
+
+**Forms** (form-core, form-engine):
+
+- [ ] Keys lose the prefix: `formRenderer.validation.required` → `validation.required`. No aliases;
+      nothing outside the repo uses the old names.
+- [ ] One translator for labels, hints and errors. A key is looked up in: the form's
+      `localisations` → the app's `messages` → the app's `translate(key, params, locale)`
+      (returns `undefined` for a key it doesn't know) → the built-in catalog → the key itself,
+      with a warning once. `createForms` and `translateErrors` take `messages`, `translate` or
+      both; `useForm` can still replace them for one form.
+- [ ] `TranslationProvider.t` gets a `locale` argument and may return `undefined`.
+- [ ] A form's table never replaces a built-in message. A rule that should say something else
+      names a key with `message`; that key gets the rule's parameters (`{max}`) and plurals, the
+      language fallback, and can come from the app's `messages` too (one shared custom message).
+      `message` also takes the conditional form labels have (`LocalisableString`).
+- [ ] Dates: the validator says why a date failed, with the bounds as `YYYY-MM-DD` parameters:
+      `validation.date` (not a date), `dateMin` (`{min}`), `dateMax` (`{max}`), `dateRange`
+      (both). The same four for `datetime`. `today+1` is shown as the actual date.
+- [ ] `translateErrors(errors, definition, locale, { messages, translate })` in form-core, for a
+      server that returns text instead of keys.
+- [ ] Storybook: the demo's errors follow the toolbar language. Docs for authors (rule messages,
+      plurals, `{min:date}`) and for translators (the catalog files).
+
+**Texts**: Flemish Dutch with "je" where a pronoun is needed; polite requests ("Please enter…",
+"Gelieve … in te vullen.", "Veuillez saisir…", "Bitte geben Sie … ein."); say how to fix it where
+that's known; examples use `name@example.com` and the sample IBAN `BE68 5390 0754 7034`.
+`pattern` and `compare` can't know what's expected, so the docs tell authors to give those rules a
+`message`.
+
+Left over:
+
+- [ ] "Today" is the checker's clock and time zone, so near midnight the browser and the server can
+      disagree about a date bound. The server would need the user's time zone in `env`.
 
 ### 5. JSON schema for form definitions
 
