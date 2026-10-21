@@ -180,6 +180,54 @@ Abstractions that keep the "where does it run" choice open:
     field author's spec finds missing keys and placeholders. Later maybe a script that gathers
     every `*.messages*.json` for a translator and splits it back.
 
+- **The form definition in three parts** (step 5, being designed): the data comes first, the form
+  is a means.
+  - `schema`: JSON Schema of the model. It takes over `validations`, `lists`, `defaults` and
+    `constants` (`required`, `format`, `maxLength`, `pattern`, `enum`, `default`, `const`).
+    Called `schema`, not `model`, because `model` is the data (`useForm(definition, { model })`).
+  - `localisations`: texts per language, as now.
+  - `components`: one view. Paths say where a value is in the model, so other views of the same
+    model are possible.
+  - A definition has one view. Another representation (e.g. a read-only summary) is another
+    definition. `schema` is inline, or a `$ref` to a separate schema file that several
+    definitions share, versioned and owned by whoever owns the data. Views are not references
+    (the engine would have to be told which view to pick).
+  - `localisations` can refer to shared files too, in a cascade: the definition's own texts, then
+    the referred files, then the app's `messages` → `translate` → field type → Octarine → the key.
+  - **The model says what is valid, a component how a value is asked.** A component takes
+    `required`/`requiredWhen` (marker), `maxLength` (counter), `format` (input type), `enum`
+    (options), `minimum`/`maximum`, `const`/`readOnly` and `default` from the model. It sets only
+    presentation: label, hint, layout, `autocomplete`, `hide`, `disabled`/`readonly`, a choice
+    between inputs that both fit, showing the counter. Never `maxLength`, `required` or `pattern`.
+    So an API call with the same model is checked with the model alone, never the form.
+  - A form can make a shared model stricter (`allOf: [{ $ref }]` plus its own keywords), never
+    looser. For differences between environments, prefer conditions on `env`: the system gives
+    every form facts about where it runs (`env.isPublic`, `env.isBackOffice`), so one model can
+    say `requiredWhen: "env.isPublic"`. The server sets `env` (from the endpoint or the user),
+    never the client, and an API check gets the model and that `env`. The system declares `env`'s
+    facts as a schema once (app and service), so conditions on `env` are checked and completed.
+  - **`hide` (view) and `requiredWhen` (model) stay separate and explicit**: hiding doesn't make
+    anything optional, `requiredWhen` doesn't hide anything. The check (and the editor and
+    builder) warns about a field that can be hidden while a rule of the model still applies.
+    Hidden values are kept and checked as usual (a change: today a hidden field skips its rules);
+    a component can say `clearWhenHidden: true` to remove its value while it's hidden.
+  - **Labels, hints and every other text in a definition are explicit keys** of `localisations`.
+    No implicit keys from the model path (`<path>.label`): they confuse, and the builder's table
+    of texts is simpler when every text is an explicit term. The definition check warns about a
+    key no table has (a typo, or literal text), which is still shown as it is.
+  - **Error texts:** the model check gives `{ path, keyword, key, params }` and no text
+    (`minItems` → `validation.minItems`, `{ min: 1 }`; `requiredWhen` → `validation.required`;
+    `format: 'iban'` → the validator's own `validation.iban`). That's all an API call needs.
+    Without more, the text is Octarine's (app `messages` → `translate` → `@octarine/i18n`). A view
+    rewords per keyword on its component, with explicit keys, conditional like labels:
+    `errorMessages: { minItems: 'travellersMin' }` (not `messages`: those are catalogs; not
+    `validations`: those sound like rules; not `errors`: that's the current errors). It takes over
+    the rule's `message`. A form's table still never rewords a built-in text by itself. A path
+    without a component gets the built-in text, and the check warns about a rule that can fail on
+    it. The server translates the same way (`translateErrors` reads `errorMessages`).
+  - Texts in the schema (`title`, `description`) only describe the model for the people who design
+    and maintain it. They aren't localised for now.
+
 ## Open decisions
 
 - **A failed rule on a disabled or read-only field** blocks nothing in the browser, since it isn't
