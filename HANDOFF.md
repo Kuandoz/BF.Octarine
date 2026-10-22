@@ -270,6 +270,21 @@ Abstractions that keep the "where does it run" choice open:
     property instead of the item.
   - **The server checks a snapshot, it doesn't replace it:** one that differs from the current
     item with its key fails with `validation.inList`; the model is never changed silently.
+    Submissions are never altered: a resubmission is a new version, so its snapshots must match
+    the current list. A field opened from an older version shows that its item changed or no
+    longer exists, and the person chooses again.
+  - The filter goes on `inList` in the model, so the server rejects a municipality outside the
+    province too. The engine knows the options depend on `province` from the compiled filter's
+    `dependencies`. A snapshot filters on its code: `$element.province === province.code`.
+  - A component can say `clearWhenUnavailable: true` to clear a value that drops out of its
+    filtered list; by default the value stays, with `validation.inList`.
+  - `options: { labels: 'Table' }` also works with `inList` (a list of codes without names): the
+    label comes from the table, keyed by the value.
+  - With `value` the model holds the code (small; a read-only view needs the list). Without it,
+    the item (a snapshot; shows without the list). Prefer snapshots for submissions shown again.
+  - Later: async list loading and server-side filtering (search, paging) for large lists. Until
+    then the whole list is fetched and filtered in the browser; larger cases (the address
+    selector) are components of their own.
   - Texts in the schema (`title`, `description`) only describe the model for the people who design
     and maintain it. They aren't localised for now.
 
