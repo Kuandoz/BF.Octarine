@@ -225,6 +225,51 @@ Abstractions that keep the "where does it run" choice open:
     the rule's `message`. A form's table still never rewords a built-in text by itself. A path
     without a component gets the built-in text, and the check warns about a rule that can fail on
     it. The server translates the same way (`translateErrors` reads `errorMessages`).
+  - **Keywords:** today's validators become standard keywords (`required`, `minLength`,
+    `maxLength`, `pattern`, `type`, `enum`, `items`/`uniqueItems` for flags, `format: email`) and
+    custom formats (`phone`, `insz`, `iban`, and any the app registers; `format` asserts). Our
+    own: `requiredWhen` (an expression, on the property), `minDate`/`maxDate` (a date, or
+    `today`/`now`/`endofday` ± N days), `validWhen` (an expression, e.g. `endDate >= startDate`;
+    explicit, instead of `compare`; its generic text needs an `errorMessages` entry, the check
+    warns without one) and `check` (names of validators the app registers: async, server, …).
+    Not yet: a general "rule X only when Y" (standard `if/then` covers it until a form needs
+    more).
+  - **Our keywords are a vocabulary**, not `x-` names: the schema's `$schema` is our meta-schema,
+    which declares them with `$vocabulary` required, so a validator that doesn't support them
+    refuses the schema instead of silently skipping them.
+  - **Paths** are dot paths everywhere a designer writes (components, expressions, errors);
+    JSON pointers from a schema validator are converted inside. A component's `path` is relative
+    to the nearest component with a `path` (`group` and `repeat` alike; a group without a `path`
+    is only visual). Expressions use the same scope: inside `address`, `country` is
+    `address.country`, and in the schema `requiredWhen` reads the property's parent object.
+    `$root.wantsCall` reaches the whole model; the `{ expression, root: true }` form goes.
+  - **Options:** a component says where its options come from with `options`, and a resolver
+    turns that into `[{ value, label }]`. `{ labels: 'RegisterType.Options' }`: the values are the
+    model's `enum` (written once, in its order), the labels a table of the localisations the
+    designer names, keyed by value; the check reports a value without a text and a text without a
+    value, per language. The definition's `lists` and the old in-between `{ label, value }` lists
+    go. Order (`sort`) and `clearable` stay the component's choice.
+  - **Lists of objects:** the model says which values are valid, the view how they're shown.
+    Our keyword `inList: { list: 'countries', value: 'alpha-3' }` (the designer picks the value
+    property; the server checks it with the same `ListProvider`, in the shared rules module); the
+    component only says `options: { label: 'name' }`. A component's own `{ list, value, label }`
+    without `inList` works, with a warning (nothing checks the value). A label that's a string is
+    shown as it is, one that's an object by language (`{ nl: 'België', fr: 'Belgique' }`) goes
+    through the language chain; `getList(name, { locale })` gets the locale too.
+  - Dependent lists: only a `filter` expression on `inList`
+    (`"$element.province === province"`, `$element` the list item, the rest the usual scope).
+    Anything more complex (the address selector) is a component of its own.
+  - Without a `value` property the model stores the whole item: the selected item is locked into
+    the model, so a read-only submitted form still shows what was chosen after the list changed.
+    The snapshot is simply the field's value at its path (no separate metadata), described by the
+    schema, ideally a `$ref` to the list item's schema, which a `ListProvider` can share.
+  - **A list defines its own key** (and its item schema), registered once in the shared rules
+    module: `{ name: 'countries', key: 'alpha-3', schema }`. The engine finds a snapshot in the
+    current list by that key (for the check, and the selected option when editing again). A
+    definition never names the key: `inList: { list: 'countries' }`, plus `value` to store one
+    property instead of the item.
+  - **The server checks a snapshot, it doesn't replace it:** one that differs from the current
+    item with its key fails with `validation.inList`; the model is never changed silently.
   - Texts in the schema (`title`, `description`) only describe the model for the people who design
     and maintain it. They aren't localised for now.
 
