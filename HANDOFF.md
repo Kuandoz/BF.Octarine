@@ -192,8 +192,12 @@ Abstractions that keep the "where does it run" choice open:
     definition. `schema` is inline, or a `$ref` to a separate schema file that several
     definitions share, versioned and owned by whoever owns the data. Views are not references
     (the engine would have to be told which view to pick).
-  - `localisations` can refer to shared files too, in a cascade: the definition's own texts, then
-    the referred files, then the app's `messages` → `translate` → field type → Octarine → the key.
+  - **Shared texts** are named tables, loaded by name through the same loader as parts:
+    `localisations: { shared: ['common', 'travel'], nl: { … } }`. The cascade: the definition's
+    own texts, its `shared` tables in order, then the app's `messages` → `translate` → field
+    type → Octarine → the key. Unlike the app's `messages`, which ship with the code, shared
+    tables are content a designer can change in the builder without a release. A part can have
+    its own `shared`: part → part's shared → form → form's shared → app → Octarine.
   - **The model says what is valid, a component how a value is asked.** A component takes
     `required`/`requiredWhen` (marker), `maxLength` (counter), `format` (input type), `enum`
     (options), `minimum`/`maximum`, `const`/`readOnly` and `default` from the model. It sets only

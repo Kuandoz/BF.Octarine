@@ -160,9 +160,9 @@ what it needs:
   "schema": { "$ref": "https://example.org/schemas/trip-request.json" },
 
   "localisations": {
-    // Shared texts come after the form's own, then the app's, the field type's and Octarine's.
-    // (How a definition names these files isn't decided yet; `include` is a placeholder.)
-    "include": ["https://example.org/texts/common.json"],
+    // Shared tables, found by name like parts, come after the form's own texts, then the app's,
+    // the field type's and Octarine's.
+    "shared": ["common"],
     "default": "nl",
     "nl": {
       "RegisterType": {
@@ -466,6 +466,6 @@ The errors are keys with parameters. The client turns them into text with the fo
 // → "Reizigers: Gelieve minstens 1 reiziger toe te voegen."
 ```
 
-## Still open
+## Not shown
 
-- How `localisations` names shared files (`include` above is a placeholder).
+- Parts (shared pieces of a form with their own `props`): see HANDOFF.
