@@ -338,6 +338,17 @@ Abstractions that keep the "where does it run" choice open:
       own table, then the form's, the shared tables, the app and Octarine. A form rewords a part's
       text explicitly under the part's name: `"nl": { "contact": { "email": "Mailadres" } }`.
       Two parts with the same key never overwrite each other.
+    - A placement takes the presentation options of a group (`hide`, `disabled`, `readonly`,
+      `clearWhenHidden`) for the part as a whole. **Settings inside a part are its `props`**,
+      declared with a schema in the part (`props: { type: 'object', properties: { askPhone: … } }`)
+      and filled in by the placement (`"props": { "askPhone": false }`). Only declared props can
+      be set; the check warns about an unknown or wrongly typed one. Expressions in the part's
+      components read them as `$props.askPhone`.
+    - `$props` exists only in the view, so it drives presentation only (`hide`, `disabled`,
+      labels). What makes a value required or invalid stays in the model (`env`, a stricter
+      schema), so the server still checks a submission with the schema alone.
+    - A changeable text is a prop whose value is a key of the form's table
+      (`"props": { "title": "contactTitle" }`), like a field type's `lookupLabel`.
 
 ## Open decisions
 
