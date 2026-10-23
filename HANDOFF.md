@@ -181,7 +181,7 @@ Abstractions that keep the "where does it run" choice open:
     every `*.messages*.json` for a translator and splits it back.
 
 - **The form definition in three parts** (step 5, being designed): the data comes first, the form
-  is a means.
+  is a means. `docs/form-definition-example.md` shows all of it in one form.
   - `schema`: JSON Schema of the model. It takes over `validations`, `lists`, `defaults` and
     `constants` (`required`, `format`, `maxLength`, `pattern`, `enum`, `default`, `const`).
     Called `schema`, not `model`, because `model` is the data (`useForm(definition, { model })`).
