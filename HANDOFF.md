@@ -321,6 +321,23 @@ Abstractions that keep the "where does it run" choice open:
       form-core, so it can still be swapped.
   - **`mapping` is not the engine's:** turning the model into another system's shape belongs to
     the application that uses the form. The definition has no `mapping` section.
+  - **Parts** (shared pieces of a form, the old `formPart`) have the same shape as a definition:
+    `schema`, `localisations`, `components`. A form places one at a path:
+    `{ "part": "contact", "path": "contact" }`. A form is a part placed at the root.
+    - A part doesn't add its schema to the form: the form's model says what is at that path
+      (`contact: { $ref: contact.schema.json }`), and the check warns when it isn't the schema the
+      part declares. The model stays the only source of truth.
+    - What old parts merged in finds a place in the model: validations in the shared schema,
+      defaults and constants as `default`/`const`, a variant (`fixedDutch`) as a stricter model
+      (`allOf` with `const`).
+    - Paths and expressions inside a part are relative to where it's placed; parts can contain
+      parts, and the engine stops at a cycle.
+    - Parts are found by name through a loader the app gives (like `ListProvider`), so the
+      engine knows nothing about files or URLs.
+    - **A part's texts are scoped to it**, like a field type's: its components read the part's
+      own table, then the form's, the shared tables, the app and Octarine. A form rewords a part's
+      text explicitly under the part's name: `"nl": { "contact": { "email": "Mailadres" } }`.
+      Two parts with the same key never overwrite each other.
 
 ## Open decisions
 
