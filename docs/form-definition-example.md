@@ -469,5 +469,3 @@ The errors are keys with parameters. The client turns them into text with the fo
 ## Still open
 
 - How `localisations` names shared files (`include` above is a placeholder).
-- The validator library: json-schema-library is the favourite (see HANDOFF, open decisions).
-- `mapping` to other systems' shapes: later.

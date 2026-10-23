@@ -300,27 +300,29 @@ Abstractions that keep the "where does it run" choice open:
     - Cards or a table is the component's choice; nested repeats follow the relative paths.
   - Texts in the schema (`title`, `description`) only describe the model for the people who design
     and maintain it. They aren't localised for now.
+  - **The JSON Schema validator is json-schema-library** (decided 2026-10-23; trial in Node with
+    `--disallow-code-generation-from-strings`, like a strict CSP):
+    - Ajv generates code (`new Function`), so a browser needs CSP `unsafe-eval`; its standalone
+      build-time mode doesn't fit definitions loaded at runtime. @cfworker/json-schema has no
+      custom keywords.
+    - `@hyperjump/json-schema` 1.18: passes without eval; real vocabularies and `$vocabulary`;
+      custom formats; 19 KB gzip (its Node file plugin needs stubbing in a bundler). But: the
+      keyword API is "experimental", schema loading is async, a `required` error doesn't say which
+      property is missing, and there is no "schema at this path" API.
+    - `json-schema-library` 11.6: passes without eval; custom keywords and formats through
+      `extendDraft`; errors carry a code and data (`required` names the key); `getNode(pointer)`
+      gives the schema at a path (for a component's `maxLength`, `enum`), `getData` fills
+      defaults; sync `validate` with `errorsAsync` for async keywords. 32 KB gzip; doesn't read
+      `$vocabulary` (only matters for other validators); depends on `valid-url` (last release 2022).
+    - Both: a keyword on a property doesn't run when the property is absent, so `requiredWhen` and
+      `validWhen` are moved to the parent object when the schema is loaded (they need the parent
+      as scope anyway).
+    - Chosen for its form features (errors with data, `getNode`, `getData`). It sits behind
+      form-core, so it can still be swapped.
+  - **`mapping` is not the engine's:** turning the model into another system's shape belongs to
+    the application that uses the form. The definition has no `mapping` section.
 
 ## Open decisions
-
-- **The JSON Schema validator** (trial 2026-10-23, in Node with
-  `--disallow-code-generation-from-strings`, like a strict CSP):
-  - Ajv generates code (`new Function`), so a browser needs CSP `unsafe-eval`; its standalone
-    build-time mode doesn't fit definitions loaded at runtime. @cfworker/json-schema has no
-    custom keywords.
-  - `@hyperjump/json-schema` 1.18: passes without eval; real vocabularies and `$vocabulary`;
-    custom formats; 19 KB gzip (its Node file plugin needs stubbing in a bundler). But: the
-    keyword API is "experimental", schema loading is async, a `required` error doesn't say which
-    property is missing, and there is no "schema at this path" API.
-  - `json-schema-library` 11.6: passes without eval; custom keywords and formats through
-    `extendDraft`; errors carry a code and data (`required` names the key); `getNode(pointer)`
-    gives the schema at a path (for a component's `maxLength`, `enum`), `getData` fills
-    defaults; sync `validate` with `errorsAsync` for async keywords. 32 KB gzip; doesn't read
-    `$vocabulary` (only matters for other validators); depends on `valid-url` (last release 2022).
-  - Both: a keyword on a property doesn't run when the property is absent, so `requiredWhen` and
-    `validWhen` are moved to the parent object when the schema is loaded (they need the parent
-    as scope anyway).
-  - Leaning towards json-schema-library for its form features; to decide.
 
 - **A failed rule on a disabled or read-only field** blocks nothing in the browser, since it isn't
   shown, so the submit goes through and the server rejects it. Should the form say something
