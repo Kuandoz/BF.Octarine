@@ -1,7 +1,8 @@
 # A form definition, by example
 
 A request for a group trip: who asks, through which channel, where they live, who travels and
-when. It shows the design in `HANDOFF.md` (Decisions → "The form definition in three parts").
+when. It shows the design in `HANDOFF.md` (Decisions → "The form definition in three parts"),
+including a shared part: the Belgian address.
 Nothing here runs yet: step 5 builds it.
 
 A definition has three parts:
@@ -83,25 +84,10 @@ view) or an API can use the same model. A simple form can also keep it inline.
           "inList": { "list": "countries" },
         },
         "iban": { "type": "string", "format": "iban", "check": ["ibanExists"] },
+        // A shared model of its own (section 3). It's only asked of applicants in Belgium;
+        // $root reaches the whole model.
         "address": {
-          "type": "object",
-          "properties": {
-            "street": { "type": "string" },
-            "postcode": { "type": "string", "pattern": "^[0-9]{4}$" },
-            // Snapshots, and the municipality filtered by the chosen province.
-            "province": {
-              "$ref": "https://example.org/schemas/province-item.json",
-              "inList": { "list": "provinces" },
-            },
-            "municipality": {
-              "$ref": "https://example.org/schemas/municipality-item.json",
-              "inList": {
-                "list": "municipalities",
-                "filter": "$element.province === province.code",
-              },
-            },
-          },
-          // The address is only asked of applicants in Belgium. $root reaches the whole model.
+          "$ref": "https://example.org/schemas/be-address.json",
           "requiredWhen": "$root.applicant.country['alpha-3'] === 'BEL'",
         },
       },
@@ -144,16 +130,116 @@ view) or an API can use the same model. A simple form can also keep it inline.
 }
 ```
 
-`requiredWhen` on `address` makes the whole object required. Its own `required` list then says
-what it needs:
+`requiredWhen` on `address` makes the whole object required. Its own `required` list (section 3) then says what it needs.
+
+## 3. A shared part: the Belgian address
+
+Many forms ask for an address, so it's a part: a view of a shared model, found by name
+(`be-address`) through the app's loader. Its model is a schema like any other
+(`be-address.schema.json`):
 
 ```jsonc
-"address": { …, "required": ["street", "postcode", "province", "municipality"] }
+{
+  "$schema": "https://octarine.dev/schema/form-model",
+  "$id": "https://example.org/schemas/be-address.json",
+  "title": "Belgian address",
+  "type": "object",
+  "properties": {
+    "street": { "type": "string" },
+    "postcode": { "type": "string", "pattern": "^[0-9]{4}$" },
+    // Snapshots, and the municipality filtered by the chosen province.
+    "province": {
+      "$ref": "https://example.org/schemas/province-item.json",
+      "inList": { "list": "provinces" },
+    },
+    "municipality": {
+      "$ref": "https://example.org/schemas/municipality-item.json",
+      "inList": { "list": "municipalities", "filter": "$element.province === province.code" },
+    },
+  },
+  "required": ["street", "postcode", "province", "municipality"],
+}
 ```
 
-(It's left out above to keep the example short.)
+The part (`be-address.part.json`) has the same three parts as a form, plus the `props` a form
+can set where it places the part:
 
-## 3. The form (`trip-request.form.json`)
+```jsonc
+{
+  // The model this view shows. The part doesn't add it to the form: the form's schema says what
+  // is at the path where the part is placed, and the check warns when it isn't this schema.
+  "schema": { "$ref": "https://example.org/schemas/be-address.json" },
+
+  // What a form may change, as a schema: an unknown or wrongly typed prop is a warning.
+  "props": {
+    "type": "object",
+    "properties": {
+      // A changeable text is a key. Without one, the part's own "Title".
+      "title": { "type": "string", "default": "Title" },
+      "showHints": { "type": "boolean", "default": true },
+    },
+  },
+
+  // Scoped to the part: another part's "Title" never overwrites this one.
+  "localisations": {
+    "default": "nl",
+    "nl": {
+      "Title": "Adres",
+      "Street": "Straat en nummer",
+      "Postcode": "Postcode",
+      "PostcodePattern": "Gelieve 4 cijfers in te vullen, zoals 9000.",
+      "Province": "Provincie",
+      "Municipality": "Gemeente",
+      "MunicipalityHint": "Kies eerst een provincie.",
+      "MunicipalityInProvince": "Deze gemeente ligt niet in de gekozen provincie.",
+    },
+    "fr": { "Title": "Adresse", "…": "…" },
+  },
+
+  // Paths are relative to where the part is placed: applicant.address in the trip form.
+  "components": [
+    {
+      "type": "group",
+      // A text from a prop: the key the form gave, looked up in the form's texts.
+      "label": "$props.title",
+      "components": [
+        { "type": "text", "path": "street", "label": "Street", "autocomplete": "street-address" },
+        {
+          "type": "text",
+          "path": "postcode",
+          "label": "Postcode",
+          "autocomplete": "postal-code",
+          "layout": { "width": "third" },
+          // Only the pattern is reworded; `required` keeps Octarine's own text.
+          "errorMessages": { "pattern": "PostcodePattern" },
+        },
+        {
+          "type": "select",
+          "path": "province",
+          "label": "Province",
+          "options": { "label": "name", "sort": true },
+          "layout": { "width": "third" },
+        },
+        {
+          "type": "select",
+          "path": "municipality",
+          "label": "Municipality",
+          // A conditional text, like any label or hint: shown while the prop is true.
+          "hint": { "MunicipalityHint": "$props.showHints" },
+          "options": { "label": "name", "sort": true },
+          "layout": { "width": "third" },
+          "disabled": "!province",
+          // A new province clears a municipality that isn't in it.
+          "clearWhenUnavailable": true,
+          "errorMessages": { "inList": "MunicipalityInProvince" },
+        },
+      ],
+    },
+  ],
+}
+```
+
+## 4. The form (`trip-request.form.json`)
 
 ```jsonc
 {
@@ -186,16 +272,10 @@ what it needs:
         "Iban": "Rekeningnummer (IBAN)",
         "IbanUnknown": "Gelieve een bestaand rekeningnummer in te vullen.",
       },
-      "Address": {
-        "Title": "Adres",
-        "Street": "Straat en nummer",
-        "Postcode": "Postcode",
-        "PostcodePattern": "Gelieve 4 cijfers in te vullen, zoals 9000.",
-        "Province": "Provincie",
-        "Municipality": "Gemeente",
-        "MunicipalityHint": "Kies eerst een provincie.",
-        "MunicipalityInProvince": "Deze gemeente ligt niet in de gekozen provincie.",
-      },
+      // A prop's text: this form calls it the home address.
+      "HomeAddress": "Woonadres",
+      // Rewording a part's own text: explicit, under the part's name.
+      "be-address": { "Street": "Straat, nummer en bus" },
       "Trip": {
         "Title": "Reis",
         "Departure": "Vertrek",
@@ -281,47 +361,13 @@ what it needs:
           "errorMessages": { "check": "Applicant.IbanUnknown" },
         },
 
+        // The part, placed at applicant.address. A placement takes the options of a group for
+        // the part as a whole (`hide` here), and the props the part declares.
         {
-          "type": "group",
+          "part": "be-address",
           "path": "address",
-          "label": "Address.Title",
           "hide": "country['alpha-3'] !== 'BEL'",
-          "components": [
-            {
-              "type": "text",
-              "path": "street",
-              "label": "Address.Street",
-              "autocomplete": "street-address",
-            },
-            {
-              "type": "text",
-              "path": "postcode",
-              "label": "Address.Postcode",
-              "autocomplete": "postal-code",
-              "layout": { "width": "third" },
-              // Only the pattern is reworded; `required` keeps Octarine's own text.
-              "errorMessages": { "pattern": "Address.PostcodePattern" },
-            },
-            {
-              "type": "select",
-              "path": "province",
-              "label": "Address.Province",
-              "options": { "label": "name", "sort": true },
-              "layout": { "width": "third" },
-            },
-            {
-              "type": "select",
-              "path": "municipality",
-              "label": "Address.Municipality",
-              "hint": "Address.MunicipalityHint",
-              "options": { "label": "name", "sort": true },
-              "layout": { "width": "third" },
-              "disabled": "!province",
-              // A new province clears a municipality that isn't in it.
-              "clearWhenUnavailable": true,
-              "errorMessages": { "inList": "Address.MunicipalityInProvince" },
-            },
-          ],
+          "props": { "title": "HomeAddress", "showHints": false },
         },
       ],
     },
@@ -405,8 +451,11 @@ What isn't there, because the model says it:
 - **No list of options.** The enum and the lists give the values.
 - **No `validations`, `defaults`, `constants` or `lists`.** They're all in the schema now.
 - **No literal text.** Every label, hint and message is a key of `localisations`.
+- **No address fields.** The part brings them, with their texts. `"title": "HomeAddress"` rather
+  than rewording the part's "Title": a form with a home and a work address places the part twice,
+  and each placement gets its own title.
 
-## 4. The model that is sent
+## 5. The model that is sent
 
 ```jsonc
 {
@@ -448,10 +497,10 @@ The snapshots (country, province, municipality) travel with the model. A read-on
 submission shows "België" and "Gent" without the lists, even after the lists change. A new version
 of the submission must match the current lists again.
 
-## 5. What the server does with it
+## 6. What the server does with it
 
-It checks the model with the schema alone. The form isn't needed, so an API call with the same
-model gets the same check:
+It checks the model with the schema alone. Neither the form nor the part is needed, so an API
+call with the same model gets the same check:
 
 - `registerType: "OfficialPhone"` from a citizen, so with `env.isBackOffice` false, fails
   `validWhen`.
@@ -465,7 +514,3 @@ The errors are keys with parameters. The client turns them into text with the fo
 { path: 'travellers', keyword: 'minItems', key: 'validation.minItems', params: { min: 1 } }
 // → "Reizigers: Gelieve minstens 1 reiziger toe te voegen."
 ```
-
-## Not shown
-
-- Parts (shared pieces of a form with their own `props`): see HANDOFF.

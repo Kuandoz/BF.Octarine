@@ -4,7 +4,7 @@ Where the JSON-forms work stands and what comes next. Keep it current: tick item
 decisions as they're made, and remove what no longer applies. Repo rules (WCAG 2.2 AA, commands,
 conventions) are in `CLAUDE.md`.
 
-Last updated: 2026-10-18.
+Last updated: 2026-10-23.
 
 ## What this is for
 
@@ -351,8 +351,12 @@ Abstractions that keep the "where does it run" choice open:
     - `$props` exists only in the view, so it drives presentation only (`hide`, `disabled`,
       labels). What makes a value required or invalid stays in the model (`env`, a stricter
       schema), so the server still checks a submission with the schema alone.
-    - A changeable text is a prop whose value is a key of the form's table
-      (`"props": { "title": "contactTitle" }`), like a field type's `lookupLabel`.
+    - A changeable text is a prop whose value is a key, like a field type's `lookupLabel`:
+      the placement says `"props": { "title": "HomeAddress" }` and the part's component
+      `"label": "$props.title"` (a text starting with `$` is never a key). A key the placement
+      gives is looked up from the form's texts, the prop's default from the part's. A prop rather
+      than rewording: a form that places the part twice (home and work address) gives each its
+      own title.
 
 ## Open decisions
 
@@ -374,7 +378,7 @@ All items done. Left over, for later steps:
 - [x] A custom repeat type says it has rows with `defineField({ rows: true })` (step 3); the server
       gets the same list through `repeatTypes`.
 - [ ] Rows are keyed by index, and touched state by path: after removing row 1, row 2 (now row 1)
-      takes over row 1's touched state. Stable row ids would fix it.
+      takes over row 1's touched state. Stable row ids would fix it (planned in 5.5).
 - [ ] After Remove, focus has to go somewhere sensible (the next row, or the Add button); that's
       the repeat component's job in step 6.
 
@@ -455,17 +459,122 @@ Left over:
       no-break space. The summary entry's format should come from the catalogs too.
 - [ ] The new nl/fr/de texts are drafts: have a native speaker read them.
 
-### 5. JSON schema for form definitions
+### 5. The form definition: schema, localisations, components
 
-- [ ] `forms.jsonSchema()` combines the form-level schema (validations, localisations, lists,
-      defaults, constants, `expressions`) with one entry per registered field type, picked by
-      `type` (from `defineField` schemas), and validator parameters. The base schema ships in
-      `form-abstractions` as data.
-- [ ] Check definitions against it during development, and in the service.
-- [ ] Use `dependencies` from compiled expressions to check that conditions name existing fields.
-- [ ] Warn the form designer about a field that can be hidden but has an unconditional `required`
-      (or another rule that can fail on a value the user can't see), in the editor, the builder and
-      the definition check.
+The design is under Decisions ("The form definition in three parts"), and
+`docs/form-definition-example.md` shows it in one form. The old shape (`validations`, `lists`,
+`defaults`, `constants`, the `{ expression, root }` condition) goes; no compatibility layer.
+Each sub-step ends with `build`, `test` and `typecheck` passing. The new code is added next to the
+old; 5.5 switches the engine over and removes the old shape.
+
+**5.1 Types (form-abstractions)**
+
+- [ ] `FormDefinition` = `{ schema, localisations, components, expressions? }`; `PartDefinition`
+      adds `props` (a JSON Schema). `schema` is a schema or `{ $ref }`.
+- [ ] `ComponentDefinition`: `type`, `path`, `label`, `hint`, `layout`, `hide`, `disabled`,
+      `readonly`, `clearWhenHidden`, `clearWhenUnavailable`, `options`, `errorMessages`,
+      `itemLabel`, `components`, plus the field type's own props. `PartPlacement`: `part`,
+      `path`, `props` and the group options. `ConditionValue` is `boolean | string` (keep
+      `defaultValue` only if a case needs it).
+- [ ] `FormLocalisations` gets `shared: string[]`.
+- [ ] `ModelError` = `{ path, keyword, key, params }`; `SubmissionResult` uses it.
+- [ ] Providers: `DefinitionLoader` (`getSchema(uri)`, `getPart(name)`, `getTexts(name)`, may be
+      async); `ListProvider.getList(name, { locale })`; a list registration
+      `{ name, key, schema }`; `env` as a schema.
+- [ ] Our meta-schema (`https://octarine.dev/schema/form-model`) with the vocabulary of our
+      keywords, as data, next to the base JSON schema of definitions.
+
+**5.2 The model check (form-core, on json-schema-library)**
+
+- [ ] Add `json-schema-library` (11.6.x) to form-core only; no other package imports it, so it
+      can be swapped. Check its size in the built bundle and its CSP behaviour in a browser spec.
+- [ ] `compileModel(schema, rules)`: refuses a `$schema` other than ours (json-schema-library
+      doesn't read `$vocabulary`); resolves `$ref`s through the loader (async, once); moves
+      `requiredWhen` and `validWhen` to the parent object; compiles every expression once.
+- [ ] Our keywords: `requiredWhen`, `validWhen`, `minDate`/`maxDate` (today's date logic and
+      `validation.date*` keys move here), `check` (registered validators, async through
+      `errorsAsync`), `inList` (`ListProvider`, `filter` with `$element`, snapshot compared
+      with the item with the same key), `uniqueBy`. Formats `phone`, `insz`, `iban` and the
+      app's; `format` asserts.
+- [ ] Expression scope: the parent object, `$root`, `env`, the functions (`sum` joins `age`);
+      `$element` in a filter. Unknown names still fail.
+- [ ] Errors: JSON pointers → dot paths; keyword → `validation.*` key and params (`minItems` →
+      `validation.minItems`, `{ min }`; `requiredWhen` → `validation.required`; `required`
+      on the parent → the missing property's path). New keys go into every locale (and
+      `en.descriptions.json`).
+- [ ] `schemaAt(path)` (via `getNode`, through array indices and `$ref`s) and
+      `defaultsAt(path)` (via `getData`) for the engine.
+- [ ] `checkModel(schema, model, { env, rules })` checks with the model alone. In 5.5 it becomes
+      `validateSubmission` (and `createLocalSubmissionValidator`), and the old `validators.ts`
+      built-ins give way to the keywords and formats; `defineValidator` stays for `check`.
+- [ ] Specs: each keyword in Node and in the browser build, with
+      `--disallow-code-generation-from-strings`; the example's schema as a fixture.
+
+**5.3 Loading a definition (form-core)**
+
+- [ ] `loadForm(definition, { loader, rules })` → a `LoadedForm`: plain data, used by the engine
+      and by the server's `translateErrors`. Async once; everything after is sync.
+- [ ] Parts are placed: their components get the placement's path as their base, their own
+      texts scope, and the placement's `props` (checked against the part's `props` schema,
+      defaults filled in). Parts in parts; a cycle is an error naming the chain.
+- [ ] Relative paths resolve against the nearest component with a `path`; a `repeat` adds the
+      row. `$props` is known in the view's expressions only, never in the schema's.
+- [ ] Shared tables are loaded by name, per scope.
+
+**5.4 Texts (form-core)**
+
+- [ ] `LocalisationService` with a chain per scope: part → part's shared → form (with
+      `<part>.<key>` overrides) → form's shared → app `messages` → `translate` → field type →
+      Octarine → the key. `$props.x` texts resolve the prop's key in the scope that gave it.
+- [ ] Error texts: the component's `errorMessages[keyword]` (conditional like labels), else the
+      built-in key; `translateErrors(errors, loadedForm, locale, …)` does the same on the server.
+- [ ] `options: { labels }` tables keyed by value; list labels by language through the chain;
+      `itemLabel` with `{index}` and the row's values.
+
+**5.5 The engine on the new definition (form-engine)**
+
+- [ ] `FormEngine(loadedForm, options)` and `useForm` take a `LoadedForm` (`useForm` can load
+      one itself). The model starts from `getData`'s defaults; `const`/`readOnly` lock a field
+      (`isConstant` and `mergeDeep` seeding go).
+- [ ] `useField()` gives the field its schema facts: `required` (from `required` and
+      `requiredWhen`), `maxLength`, `minimum`/`maximum`, `format`, `enum`.
+- [ ] Validation after a change: the whole model (forms are small); async keywords keep the
+      pending state of step 3. Errors keyed by path as today.
+- [ ] `hide` with `clearWhenHidden`; hidden values are kept and checked otherwise.
+- [ ] Options: `useOptions()` resolves `enum` + `labels`, `inList` + `label` (filtered,
+      dependencies from the compiled filter), `sort`; `clearWhenUnavailable`; a snapshot that
+      no longer matches its list says so and asks to choose again.
+- [ ] Repeats: stable row ids in the engine (touched state follows the row); new rows from
+      `items` defaults; `minItems`/`maxItems` disable Add/Remove with a reason; move up/down;
+      arrays of plain values. Closes the step 1 leftovers on row ids.
+- [ ] Remove the old shape's code: `validations` expansion (`items.*`), `lists`, `defaults`,
+      `constants`, `declareFieldKeys`, the `root` condition. Move pure rules out of the engine
+      specs (step 2 leftover).
+
+**5.6 The definition check (form-core)**
+
+- [ ] `checkDefinition(definition, { loader, rules, fields })` → `[{ level, pointer, code,
+    params }]`, for development, the editor (step 7) and the service (step 10).
+- [ ] Shape: the definition against the base schema plus one entry per field type
+      (`defineField` schemas, the old `forms.jsonSchema()` item), the model against our
+      meta-schema. Expressions compile, and the names they read exist (`dependencies`).
+- [ ] Warnings: a text key no table has (per language); an option value without a text or a text
+      without a value; a field that can be hidden while still required; `validWhen` without an
+      `errorMessages` entry; a rule that can fail on a path without a component; an unknown or
+      wrongly typed prop; a part placed where the schema isn't the one it declares; options
+      without `inList`; a component setting what the model owns (`maxLength`, `required`,
+      `pattern`).
+
+**5.7 Moving over**
+
+- [ ] The Storybook demo (`apps/storybook/src/forms/form-engine/`) and `FormEngine.mdx` on the new
+      shape, with the trip example (a part included) as a story; the playground if it uses forms.
+- [ ] READMEs of form-abstractions, form-core and form-engine; `CLAUDE.md`'s package line if it
+      changes; this file.
+
+Risks to watch: json-schema-library's `$ref` resolution and `getNode` through
+`allOf`/`$ref` (a form making a shared model stricter); error paths for keywords moved to the
+parent; whole-model validation cost on large repeats (validate the changed subtree if needed).
 
 ### 6. `@octarine/forms` and more controls
 
@@ -507,7 +616,8 @@ every theme), then add its `defineField` in `@octarine/forms`.
 
 - [ ] **Developers** register their own Vue component with `defineField`; the editor and builder
       pick it up from its schema. Easy once steps 3 and 6 exist.
-- [ ] **Form authors** build reusable parts (a person block, an address block) with parameters. The
+- [ ] **Form authors** build reusable parts (a person block, an address block) with parameters:
+      parts in JSON come with step 5; this is about parts with their own HTML and JS. The
       bar: someone with a basic understanding of HTML, JS and Tailwind can make one. How their
       HTML and JS run safely is an open decision (above).
 - [ ] Texts per field type and validator: `defineField({ messages })`, `defineValidator({ messages })`,
